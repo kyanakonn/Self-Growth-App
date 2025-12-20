@@ -1,61 +1,60 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Self Growth App</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Self Growth App</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+    }
+    .screen.active {
+      display: block;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      border-radius: 12px;
+      border: none;
+      background: #38bdf8;
+      color: #000;
+      margin-top: 16px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+  </style>
 </head>
-
 <body>
 
-<!-- ログイン画面 -->
-<div id="loginScreen">
-  <h1>Self Growth App</h1>
+  <!-- ===== スタート画面 ===== -->
+  <div id="startScreen" class="screen active">
+    <h1>Self Growth App</h1>
+    <button id="newStartBtn">新規スタート</button>
+  </div>
 
-  <button id="newBtn">新規スタート</button>
+  <!-- ===== ホーム画面 ===== -->
+  <div id="homeScreen" class="screen">
+    <h1>ホーム</h1>
+    <p id="userIdText"></p>
+    <button onclick="logout()">ログアウト</button>
+  </div>
 
-  <input id="codeInput" placeholder="引き継ぎコード">
-  <button id="loginBtn">ログイン</button>
-</div>
-
-<!-- アプリ本体 -->
-<div id="appScreen" hidden>
-
-  <header>
-    <span id="levelText">Lv.1</span>
-    <button id="settingBtn">⚙️</button>
-  </header>
-
-  <section id="weekly">
-    <h3>週間目標</h3>
-    <div id="weeklyRemain">計算中...</div>
-  </section>
-
-  <h2 id="timer">00:00</h2>
-
-  <button id="startBtn">START</button>
-  <button id="stopBtn" disabled>STOP</button>
-  <button id="saveBtn" hidden>保存</button>
-
-  <h3>科目</h3>
-  <ul id="subjectList"></ul>
-
-  <input id="subjectInput" placeholder="科目名">
-  <button id="addSubjectBtn">追加</button>
-
-  <section>
-    <div>
-      <button onclick="drawGraph()">日</button>
-      <button onclick="drawGraph()">週</button>
-      <button onclick="drawGraph()">月</button>
-    </div>
-    <canvas id="chart"></canvas>
-  </section>
-
-</div>
-
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
