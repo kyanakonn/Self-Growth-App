@@ -12,9 +12,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ===== public（※APIだけ使うなら不要だが安全のため）=====
+// ===== public =====
 app.use(express.static(path.join(__dirname, "../public")));
-
 
 // ===== DB =====
 const db = new sqlite3.Database("./db.sqlite");
@@ -59,7 +58,7 @@ db.serialize(() => {
   `);
 });
 
-// ===== ヘルスチェック（超重要）=====
+// ===== ヘルスチェック =====
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
@@ -101,6 +100,12 @@ app.get("/api/subjects/:userId", (req, res) => {
     [req.params.userId],
     (e, r) => res.json(r)
   );
+});
+
+app.delete("/api/subject/:id", (req, res) => {
+  db.run("DELETE FROM subjects WHERE id=?", [req.params.id], () => {
+    res.json({ ok: true });
+  });
 });
 
 // ===== 記録 =====
@@ -172,16 +177,6 @@ function calcStreak(userId) {
         prev = d;
       }
 
-// 週間目標変更
-app.post("/api/weekly-target", (req, res) => {
-  const { userId, minutes } = req.body;
-  db.run(
-    "UPDATE profile SET weeklyTarget=? WHERE userId=?",
-    [minutes, userId],
-    () => res.json({ ok: true })
-  );
-});
-
       db.get(
         "SELECT maxStreak FROM profile WHERE userId=?",
         [userId],
@@ -196,63 +191,37 @@ app.post("/api/weekly-target", (req, res) => {
   );
 }
 
-app.post("/api/ai-analysis", async (req, res) => {
-  const { userId, targetUniv, mock } = req.body;
+// ===== 週間目標変更 =====
+app.post("/api/weekly-target", (req, res) => {
+  const { userId, minutes } = req.body;
+  db.run(
+    "UPDATE profile SET weeklyTarget=? WHERE userId=?",
+    [minutes, userId],
+    () => res.json({ ok: true })
+  );
+});
 
-  // 学習ログ取得
+// ===== 疑似AI分析（ルールベース） =====
+app.post("/api/ai-analysis", (req, res) => {
+  const { userId } = req.body;
+
   db.all(
-    `SELECT subjectId, SUM(minutes) as minutes 
-     FROM logs WHERE userId=? GROUP BY subjectId`,
+    "SELECT subjectId, SUM(minutes) as minutes FROM logs WHERE userId=? GROUP BY subjectId",
     [userId],
-    async (e, rows) => {
+    (e, rows) => {
+      // 科目ごとの学習時間を集計
+      const analysis = rows.map(r => ({
+        subjectId: r.subjectId,
+        minutes: r.minutes,
+        advice: r.minutes < 180 ? "もっと勉強を増やしましょう" : "順調です"
+      }));
 
-      // 科目名変換
-      const subjects = {};
-      for (const r of rows) {
-        subjects[r.subjectId] = r.minutes;
-      }
-
-      const prompt = `
-あなたは日本の大学受験専門AIです。
-
-【志望大学】
-${targetUniv}
-
-【学習時間（分）】
-${JSON.stringify(subjects, null, 2)}
-
-【模試成績】
-${JSON.stringify(mock, null, 2)}
-
-以下を出力してください：
-1. 現在の勉強配分の評価
-2. 問題点
-3. 次の1週間の具体的勉強時間配分（時間）
-4. 今日やるべきこと3つ
-
-日本語で、受験生向けに厳しめに。
-`;
-
-      const r2 = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "gpt-4.1-mini",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.4
-        })
-      });
-
-      const data = await r2.json();
-      res.json({ result: data.choices[0].message.content });
+      res.json({ result: analysis });
     }
   );
 });
 
-// ===== 起動（Render対応）=====
+// ===== 起動 =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
