@@ -11,14 +11,17 @@ body{margin:0;background:#f8fafc;color:#0f172a;font-family:system-ui}
 .screen.active{display:block}
 button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.12)}
 .card{background:#fff;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 6px 20px rgba(0,0,0,.1)}
-.exp-bar{height:16px;background:#e5e7eb;border-radius:10px;overflow:hidden}
-.exp-fill{height:100%;background:#0f172a;width:0%;transition:1s}
+.exp-bar{height:16px;background:#e5e7eb;border-radius:10px;overflow:hidden;position:relative}
+.exp-fill{height:100%;background:#0f172a;width:0%;transition:width 1s, transform 0.3s}
+.exp-up{transform:scaleY(1.4)}
 .timer{font-size:40px;text-align:center}
 .timer-full{position:fixed;inset:0;background:#fff;display:none;align-items:center;justify-content:center;flex-direction:column;font-size:72px;z-index:999}
 .timer-btns{margin-top:20px;width:80%;display:flex;justify-content:space-around}
 .timer-btns button{width:30%;font-size:18px}
 .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
 .day{padding:8px;text-align:center;border-radius:8px;background:#e5e7eb}
+.bonus{padding:16px;margin-top:16px;background:#fde68a;border-radius:18px;text-align:center;font-weight:bold;animation:flash 0.8s}
+@keyframes flash{0%{transform:scale(1);background:#fde68a}50%{transform:scale(1.2);background:#facc15}100%{transform:scale(1);background:#fde68a}}
 </style>
 </head>
 <body>
@@ -30,17 +33,20 @@ button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;bac
     <input id="codeInput" type="text" placeholder="引き継ぎコード">
     <button onclick="loginWithCode()">ログイン</button>
   </div>
+  <div id="showCode" style="margin-top:16px;color:#0f172a;font-weight:bold"></div>
 </div>
 
 <div id="home" class="screen">
 
   <!-- レベル・EXP・ストリーク・週間残り -->
   <div class="card">
-    Lv <span id="level"></span>
+    Lv <span id="level">1</span>
     <div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
-    🔥 <span id="streak"></span>日  
-    ⏳ 週間残り <span id="weeklyRemain"></span>
+    🔥 <span id="streak">0</span>日  
+    ⏳ 週間残り <span id="weeklyRemain">0</span>
   </div>
+
+  <div id="bonusDiv" class="bonus" style="display:none">🎉 100時間達成ボーナス！🎉</div>
 
   <!-- 週間目標設定 -->
   <div class="card">
@@ -128,25 +134,34 @@ let timerRunning = false;
 let elapsedSeconds = 0;
 let timerInterval = null;
 let currentSubject = null;
-let userId = 'demo-user';
+let userId = null;
+let chart = null;
 
 const timerSubject = document.getElementById('timerSubject');
 const timerFull = document.getElementById('timerFull');
 const timerText = document.getElementById('timerText');
 const subjectList = document.getElementById('subjectList');
+const expFill = document.getElementById('expFill');
+const bonusDiv = document.getElementById('bonusDiv');
+const showCode = document.getElementById('showCode');
 
 // ===== 初期化 =====
 async function init(){
-  await loadSubjects();
-  renderCalendar();
+  if(userId) {
+    await loadSubjects();
+    renderCalendar();
+    await updateProfileDisplay();
+    initChart();
+  }
 }
-init();
 
 // ===== 新規スタート =====
 function newStart(){
+  userId = 'user-'+Date.now().toString(36);
   document.getElementById('start').classList.remove('active');
   document.getElementById('home').classList.add('active');
-  awaitProfile();
+  showCode.textContent = '引き継ぎコード: '+userId;
+  init();
 }
 
 // ===== 引き継ぎログイン =====
@@ -154,23 +169,22 @@ function loginWithCode(){
   const code = document.getElementById('codeInput').value.trim();
   if(!code) return alert("コードを入力してください");
   userId = code;
-  newStart();
+  document.getElementById('start').classList.remove('active');
+  document.getElementById('home').classList.add('active');
+  init();
 }
 
 // ===== 科目追加 =====
 async function addSubject(){
   const name = document.getElementById('newSubject').value.trim();
   if(!name) return alert("科目名を入力してください");
-
-  const res = await fetch('/api/subject',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({userId, name})
-  });
-  if(res.ok){
-    document.getElementById('newSubject').value='';
-    await loadSubjects();
-  }
+  // 疑似API
+  const id = 'subj-'+Date.now().toString(36);
+  subjects.push({id,name});
+  document.getElementById('newSubject').value='';
+  await renderSubjectList();
+  await renderSubjectSelect();
+  updateChart();
 }
 
 // ===== 科目削除 =====
@@ -178,16 +192,18 @@ async function deleteSubject(id){
   subjects = subjects.filter(s=>s.id!==id);
   await renderSubjectList();
   await renderSubjectSelect();
+  updateChart();
 }
 
 // ===== 科目ロード =====
 async function loadSubjects(){
-  const res = await fetch(`/api/subjects/${userId}`);
-  subjects = await res.json();
+  // 疑似API 初期科目
+  subjects = [{id:'eng',name:'英語'},{id:'world',name:'世界史'}];
   await renderSubjectList();
   await renderSubjectSelect();
 }
 
+// ===== 表示 =====
 async function renderSubjectList(){
   subjectList.innerHTML='';
   subjects.forEach(s=>{
@@ -209,7 +225,6 @@ async function renderSubjectSelect(){
     o.value=s.id; o.textContent=s.name;
     manual.appendChild(o);
   });
-
   timerSubject.innerHTML='';
   subjects.forEach(s=>{
     const o=document.createElement('option');
@@ -218,47 +233,53 @@ async function renderSubjectSelect(){
   });
 }
 
-// ===== 週間目標設定 =====
-async function updateWeekly(){
-  const val = parseInt(document.getElementById('weeklyInput').value);
-  if(isNaN(val) || val<=0) return alert("正しい数値を入力してください");
-
-  await fetch('/api/weekly-target',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({userId, minutes: val})
-  });
-
-  document.getElementById('weeklyRemain').textContent = val;
-}
-
 // ===== 手動記録 =====
 async function saveManual(){
   const subj = document.getElementById('manualSubject').value;
-  const h = parseInt(document.getElementById('manualHour').value) || 0;
-  const m = parseInt(document.getElementById('manualMin').value) || 0;
-  const total = h*60 + m;
+  const h = parseInt(document.getElementById('manualHour').value)||0;
+  const m = parseInt(document.getElementById('manualMin').value)||0;
+  const total = h*60+m;
   if(total<=0) return alert("1分以上入力してください");
-
-  await fetch('/api/log',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({userId, subjectId:subj, minutes:total})
-  });
-  alert("記録しました");
   document.getElementById('manualHour').value='';
   document.getElementById('manualMin').value='';
+  alert("記録しました");
+  await updateProfileDisplay(total);
+  updateChart(subj,total);
 }
 
-// ===== タイマー関数 =====
+// ===== プロフィール更新（疑似API） =====
+let profile={level:1,exp:0,totalMinutes:0,streak:0,weeklyTarget:20};
+async function updateProfileDisplay(addMinutes=0){
+  profile.totalMinutes += addMinutes;
+  let need = profile.level*profile.level*100;
+  let oldLevel=profile.level;
+  profile.exp+=addMinutes;
+  while(profile.exp>=need){
+    profile.exp-=need;
+    profile.level++;
+    need=profile.level*profile.level*100;
+    expFill.classList.add('exp-up');
+    setTimeout(()=>expFill.classList.remove('exp-up'),300);
+  }
+  document.getElementById('level').textContent = profile.level;
+  document.getElementById('streak').textContent = profile.streak;
+  document.getElementById('weeklyRemain').textContent = Math.max(0,profile.weeklyTarget - profile.totalMinutes/60);
+  expFill.style.width = Math.min(100,profile.exp/(profile.level*profile.level*100)*100)+'%';
+
+  if(profile.totalMinutes/60>=100){
+    bonusDiv.style.display='block';
+    setTimeout(()=>bonusDiv.style.display='none',2000);
+  }
+}
+
+// ===== タイマー =====
 function startTimer(){
   if(timerRunning) return;
   const selected = timerSubject.value;
   if(!selected) return alert("科目を選択してください");
-
-  currentSubject=selected;
-  timerRunning=true;
-  elapsedSeconds=0;
+  currentSubject = selected;
+  timerRunning = true;
+  elapsedSeconds = 0;
 
   timerFull.style.display='flex';
   timerText.textContent='0:00';
@@ -286,40 +307,34 @@ function stopTimer(){
   document.getElementById('save-btn').style.display='block';
   document.getElementById('fullStopBtn').disabled=true;
   document.getElementById('fullSaveBtn').style.display='block';
+
+  document.getElementById('start-btn').disabled=false;
+  document.getElementById('fullStartBtn').disabled=false;
 }
 
 async function saveTimer(){
   const minutes = Math.floor(elapsedSeconds/60);
   if(minutes<=0) return alert("1分以上計測してください");
-
-  await fetch('/api/log',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({userId, subjectId:currentSubject, minutes})
-  });
-
+  alert(`科目:${currentSubject} に ${minutes}分 記録しました`);
   elapsedSeconds=0;
   timerText.textContent='0:00';
   timerFull.style.display='none';
   document.getElementById('save-btn').style.display='none';
-  document.getElementById('start-btn').disabled=false;
   document.getElementById('fullSaveBtn').style.display='none';
-  document.getElementById('fullStartBtn').disabled=false;
 
-  alert("保存しました");
+  await updateProfileDisplay(minutes);
+  updateChart(currentSubject,minutes);
 }
 
-// 通常ボタン
-document.getElementById('start-btn').addEventListener('click', startTimer);
-document.getElementById('stop-btn').addEventListener('click', stopTimer);
-document.getElementById('save-btn').addEventListener('click', saveTimer);
+// ボタン設定
+document.getElementById('start-btn').addEventListener('click',startTimer);
+document.getElementById('stop-btn').addEventListener('click',stopTimer);
+document.getElementById('save-btn').addEventListener('click',saveTimer);
+document.getElementById('fullStartBtn').addEventListener('click',startTimer);
+document.getElementById('fullStopBtn').addEventListener('click',stopTimer);
+document.getElementById('fullSaveBtn').addEventListener('click',saveTimer);
 
-// 全画面ボタン
-document.getElementById('fullStartBtn').addEventListener('click', startTimer);
-document.getElementById('fullStopBtn').addEventListener('click', stopTimer);
-document.getElementById('fullSaveBtn').addEventListener('click', saveTimer);
-
-// ===== カレンダー描画 =====
+// ===== カレンダー =====
 function renderCalendar(){
   const calendar=document.getElementById('calendar');
   calendar.innerHTML='';
@@ -329,6 +344,25 @@ function renderCalendar(){
     d.textContent=i;
     calendar.appendChild(d);
   }
+}
+
+// ===== グラフ =====
+function initChart(){
+  const ctx=document.getElementById('chart');
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{labels:subjects.map(s=>s.name),datasets:[{label:'勉強時間',data:subjects.map(()=>0),backgroundColor:'#0f172a'}]},
+    options:{responsive:true,animation:true}
+  });
+}
+
+function updateChart(subj=null,addMinutes=0){
+  if(!chart) initChart();
+  if(subj){
+    const idx=subjects.findIndex(s=>s.id===subj);
+    if(idx>=0) chart.data.datasets[0].data[idx]+=addMinutes/60;
+  }
+  chart.update();
 }
 </script>
 </body>
