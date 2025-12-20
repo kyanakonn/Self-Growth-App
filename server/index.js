@@ -196,8 +196,6 @@ app.post("/api/weekly-target", (req, res) => {
   );
 }
 
-import fetch from "node-fetch";
-
 app.post("/api/ai-analysis", async (req, res) => {
   const { userId, targetUniv, mock } = req.body;
 
