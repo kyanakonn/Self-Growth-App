@@ -172,6 +172,16 @@ function calcStreak(userId) {
         prev = d;
       }
 
+// 週間目標変更
+app.post("/api/weekly-target", (req, res) => {
+  const { userId, minutes } = req.body;
+  db.run(
+    "UPDATE profile SET weeklyTarget=? WHERE userId=?",
+    [minutes, userId],
+    () => res.json({ ok: true })
+  );
+});
+
       db.get(
         "SELECT maxStreak FROM profile WHERE userId=?",
         [userId],
