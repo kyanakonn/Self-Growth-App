@@ -3,12 +3,19 @@ import sqlite3 from "sqlite3";
 import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
 
+// ===== public（※APIだけ使うなら不要だが安全のため）=====
+app.use(express.static(path.join(__dirname, "public")));
+
+// ===== DB =====
 const db = new sqlite3.Database("./db.sqlite");
 
 // ===== DB初期化 =====
@@ -51,9 +58,15 @@ db.serialize(() => {
   `);
 });
 
+// ===== ヘルスチェック（超重要）=====
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
 // ===== 新規 or 引き継ぎ =====
 app.post("/api/login", (req, res) => {
   const { code } = req.body;
+
   if (code) {
     db.get("SELECT * FROM users WHERE id=?", [code], (e, row) => {
       if (!row) return res.status(404).json({ error: "not found" });
@@ -73,13 +86,19 @@ app.post("/api/login", (req, res) => {
 // ===== 科目 =====
 app.post("/api/subject", (req, res) => {
   const { userId, name } = req.body;
-  db.run("INSERT INTO subjects VALUES (?,?,?)", [uuidv4(), userId, name]);
+  db.run("INSERT INTO subjects VALUES (?,?,?)", [
+    uuidv4(),
+    userId,
+    name
+  ]);
   res.json({ ok: true });
 });
 
 app.get("/api/subjects/:userId", (req, res) => {
-  db.all("SELECT * FROM subjects WHERE userId=?", [req.params.userId], (e, r) =>
-    res.json(r)
+  db.all(
+    "SELECT * FROM subjects WHERE userId=?",
+    [req.params.userId],
+    (e, r) => res.json(r)
   );
 });
 
@@ -93,7 +112,6 @@ app.post("/api/log", (req, res) => {
     [uuidv4(), userId, subjectId, minutes, date]
   );
 
-  // EXP計算（1分 = 1EXP）
   db.get("SELECT * FROM profile WHERE userId=?", [userId], (e, p) => {
     let exp = p.exp + minutes;
     let level = p.level;
@@ -110,6 +128,7 @@ app.post("/api/log", (req, res) => {
       [exp, level, minutes, userId]
     );
 
+    calcStreak(userId);
     res.json({ ok: true, level, exp });
   });
 });
@@ -123,7 +142,7 @@ app.get("/api/profile/:userId", (req, res) => {
   );
 });
 
-//ログ取得（カレンダー・グラフ用）
+// ===== ログ取得 =====
 app.get("/api/logs/:userId", (req, res) => {
   db.all(
     "SELECT * FROM logs WHERE userId=?",
@@ -132,7 +151,7 @@ app.get("/api/logs/:userId", (req, res) => {
   );
 });
 
-//ストリーク計算
+// ===== ストリーク計算 =====
 function calcStreak(userId) {
   db.all(
     "SELECT DISTINCT date FROM logs WHERE userId=? ORDER BY date DESC",
@@ -143,9 +162,8 @@ function calcStreak(userId) {
 
       for (const r of rows) {
         const d = new Date(r.date);
-        if (!prev) {
-          streak = 1;
-        } else {
+        if (!prev) streak = 1;
+        else {
           const diff = (prev - d) / 86400000;
           if (diff === 1) streak++;
           else break;
@@ -153,16 +171,22 @@ function calcStreak(userId) {
         prev = d;
       }
 
-      db.get("SELECT maxStreak FROM profile WHERE userId=?", [userId], (e, p) => {
-        db.run(
-          "UPDATE profile SET streak=?, maxStreak=? WHERE userId=?",
-          [streak, Math.max(streak, p.maxStreak), userId]
-        );
-      });
+      db.get(
+        "SELECT maxStreak FROM profile WHERE userId=?",
+        [userId],
+        (e, p) => {
+          db.run(
+            "UPDATE profile SET streak=?, maxStreak=? WHERE userId=?",
+            [streak, Math.max(streak, p.maxStreak), userId]
+          );
+        }
+      );
     }
   );
 }
 
-
-
-app.listen(3000, () => console.log("Server running"));
+// ===== 起動（Render対応）=====
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});
