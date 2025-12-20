@@ -1,60 +1,76 @@
+<!-- 省略せず、ここから全文 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Self Growth App</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, sans-serif;
-      background: #0f172a;
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .screen {
-      display: none;
-      width: 100%;
-      max-width: 420px;
-      padding: 24px;
-    }
-    .screen.active {
-      display: block;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      font-size: 16px;
-      border-radius: 12px;
-      border: none;
-      background: #38bdf8;
-      color: #000;
-      margin-top: 16px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Self Growth App</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{margin:0;font-family:system-ui;background:#020617;color:#fff}
+.screen{display:none;padding:16px}
+.screen.active{display:block}
+button,input,select{width:100%;padding:12px;margin-top:8px;border-radius:10px;border:none}
+button{background:#38bdf8;color:#000}
+.card{background:#1e293b;padding:12px;border-radius:12px;margin-top:12px}
+.exp-bar{background:#334155;border-radius:10px;overflow:hidden}
+.exp-fill{height:16px;background:linear-gradient(90deg,#22c55e,#4ade80);transition:1s}
+.list-item{padding:8px;border-bottom:1px solid #334155}
+.small{font-size:12px;opacity:.7}
+</style>
 </head>
+
 <body>
 
-  <!-- ===== スタート画面 ===== -->
-  <div id="startScreen" class="screen active">
-    <h1>Self Growth App</h1>
-    <button id="newStartBtn">新規スタート</button>
+<div id="start" class="screen active">
+  <h1>Self Growth App</h1>
+  <button onclick="newStart()">新規スタート</button>
+  <input id="codeInput" placeholder="引き継ぎコード">
+  <button onclick="loginWithCode()">ログイン</button>
+</div>
+
+<div id="home" class="screen">
+  <div class="card">
+    Lv <span id="level"></span> / EXP <span id="exp"></span>
+    <div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
+    🔥 <span id="streak"></span>日
+    🎯 残り <span id="weeklyRemain"></span>
   </div>
 
-  <!-- ===== ホーム画面 ===== -->
-  <div id="homeScreen" class="screen">
-    <h1>ホーム</h1>
-    <p id="userIdText"></p>
-    <button onclick="logout()">ログアウト</button>
+  <div class="card">
+    <h3>科目</h3>
+    <select id="subjectSelect"></select>
+    <input id="subjectInput" placeholder="科目名">
+    <button onclick="addSubject()">追加</button>
   </div>
 
-  <script src="app.js"></script>
+  <div class="card">
+    <h3>タイマー</h3>
+    <div id="timer">00:00</div>
+    <button onclick="startTimer()">START</button>
+    <button onclick="stopTimer()">STOP</button>
+    <button onclick="saveTimer()">保存</button>
+  </div>
+
+  <div class="card">
+    <h3>グラフ</h3>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>ログ</h3>
+    <div id="logList"></div>
+  </div>
+
+  <div class="card">
+    <h3>設定</h3>
+    <input id="weeklyInput" placeholder="週間目標（分）">
+    <button onclick="updateWeekly()">週間目標変更</button>
+    <div class="small">引き継ぎコード：<span id="userCode"></span></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
