@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Self Growth App</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div id="login">
+  <h1>Self Growth App</h1>
+  <button onclick="newAccount()">新規スタート</button>
+  <input id="code" placeholder="引き継ぎコード"/>
+  <button onclick="login()">ログイン</button>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <span id="level"></span>
+    <button onclick="openProfile()">⚙️</button>
+  </header>
+
+  <h2 id="timer">00:00</h2>
+  <button id="start" onclick="startTimer()">START</button>
+  <button id="stop" onclick="stopTimer()" disabled>STOP</button>
+  <button id="save" onclick="saveLog()" hidden>保存</button>
+
+  <h3>科目</h3>
+  <ul id="subjects"></ul>
+  <input id="newSub"/>
+  <button onclick="addSubject()">追加</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
