@@ -123,4 +123,46 @@ app.get("/api/profile/:userId", (req, res) => {
   );
 });
 
+//ログ取得（カレンダー・グラフ用）
+app.get("/api/logs/:userId", (req, res) => {
+  db.all(
+    "SELECT * FROM logs WHERE userId=?",
+    [req.params.userId],
+    (e, r) => res.json(r)
+  );
+});
+
+//ストリーク計算
+function calcStreak(userId) {
+  db.all(
+    "SELECT DISTINCT date FROM logs WHERE userId=? ORDER BY date DESC",
+    [userId],
+    (e, rows) => {
+      let streak = 0;
+      let prev = null;
+
+      for (const r of rows) {
+        const d = new Date(r.date);
+        if (!prev) {
+          streak = 1;
+        } else {
+          const diff = (prev - d) / 86400000;
+          if (diff === 1) streak++;
+          else break;
+        }
+        prev = d;
+      }
+
+      db.get("SELECT maxStreak FROM profile WHERE userId=?", [userId], (e, p) => {
+        db.run(
+          "UPDATE profile SET streak=?, maxStreak=? WHERE userId=?",
+          [streak, Math.max(streak, p.maxStreak), userId]
+        );
+      });
+    }
+  );
+}
+
+
+
 app.listen(3000, () => console.log("Server running"));
