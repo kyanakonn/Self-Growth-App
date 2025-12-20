@@ -33,6 +33,24 @@
   <button onclick="addSubject()">追加</button>
 </div>
 
+<section id="weekly">
+  <h3>週間目標</h3>
+  <div id="weeklyRemain"></div>
+</section>
+
+<section>
+  <canvas id="chart"></canvas>
+  <button onclick="draw('day')">日</button>
+  <button onclick="draw('week')">週</button>
+  <button onclick="draw('month')">月</button>
+</section>
+
+<section>
+  <h3>カレンダー</h3>
+  <div id="calendar"></div>
+</section>
+
+
 <script src="app.js"></script>
 </body>
 </html>
