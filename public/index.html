@@ -1,55 +1,60 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Self Growth App</title>
-<link rel="stylesheet" href="style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<div id="login">
+<!-- ログイン画面 -->
+<div id="loginScreen">
   <h1>Self Growth App</h1>
-  <button onclick="newAccount()">新規スタート</button>
-  <input id="code" placeholder="引き継ぎコード"/>
-  <button onclick="login()">ログイン</button>
+
+  <button id="newBtn">新規スタート</button>
+
+  <input id="codeInput" placeholder="引き継ぎコード">
+  <button id="loginBtn">ログイン</button>
 </div>
 
-<div id="app" hidden>
+<!-- アプリ本体 -->
+<div id="appScreen" hidden>
+
   <header>
-    <span id="level"></span>
-    <button onclick="openProfile()">⚙️</button>
+    <span id="levelText">Lv.1</span>
+    <button id="settingBtn">⚙️</button>
   </header>
 
+  <section id="weekly">
+    <h3>週間目標</h3>
+    <div id="weeklyRemain">計算中...</div>
+  </section>
+
   <h2 id="timer">00:00</h2>
-  <button id="start" onclick="startTimer()">START</button>
-  <button id="stop" onclick="stopTimer()" disabled>STOP</button>
-  <button id="save" onclick="saveLog()" hidden>保存</button>
+
+  <button id="startBtn">START</button>
+  <button id="stopBtn" disabled>STOP</button>
+  <button id="saveBtn" hidden>保存</button>
 
   <h3>科目</h3>
-  <ul id="subjects"></ul>
-  <input id="newSub"/>
-  <button onclick="addSubject()">追加</button>
+  <ul id="subjectList"></ul>
+
+  <input id="subjectInput" placeholder="科目名">
+  <button id="addSubjectBtn">追加</button>
+
+  <section>
+    <div>
+      <button onclick="drawGraph()">日</button>
+      <button onclick="drawGraph()">週</button>
+      <button onclick="drawGraph()">月</button>
+    </div>
+    <canvas id="chart"></canvas>
+  </section>
+
 </div>
-
-<section id="weekly">
-  <h3>週間目標</h3>
-  <div id="weeklyRemain"></div>
-</section>
-
-<section>
-  <canvas id="chart"></canvas>
-  <button onclick="draw('day')">日</button>
-  <button onclick="draw('week')">週</button>
-  <button onclick="draw('month')">月</button>
-</section>
-
-<section>
-  <h3>カレンダー</h3>
-  <div id="calendar"></div>
-</section>
-
 
 <script src="app.js"></script>
 </body>
