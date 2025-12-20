@@ -196,6 +196,64 @@ app.post("/api/weekly-target", (req, res) => {
   );
 }
 
+import fetch from "node-fetch";
+
+app.post("/api/ai-analysis", async (req, res) => {
+  const { userId, targetUniv, mock } = req.body;
+
+  // 学習ログ取得
+  db.all(
+    `SELECT subjectId, SUM(minutes) as minutes 
+     FROM logs WHERE userId=? GROUP BY subjectId`,
+    [userId],
+    async (e, rows) => {
+
+      // 科目名変換
+      const subjects = {};
+      for (const r of rows) {
+        subjects[r.subjectId] = r.minutes;
+      }
+
+      const prompt = `
+あなたは日本の大学受験専門AIです。
+
+【志望大学】
+${targetUniv}
+
+【学習時間（分）】
+${JSON.stringify(subjects, null, 2)}
+
+【模試成績】
+${JSON.stringify(mock, null, 2)}
+
+以下を出力してください：
+1. 現在の勉強配分の評価
+2. 問題点
+3. 次の1週間の具体的勉強時間配分（時間）
+4. 今日やるべきこと3つ
+
+日本語で、受験生向けに厳しめに。
+`;
+
+      const r2 = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "gpt-4.1-mini",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.4
+        })
+      });
+
+      const data = await r2.json();
+      res.json({ result: data.choices[0].message.content });
+    }
+  );
+});
+
 // ===== 起動（Render対応）=====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
