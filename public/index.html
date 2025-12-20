@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Self Growth App</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{margin:0;background:#f8fafc;color:#0f172a;font-family:system-ui}
 .screen{display:none;padding:16px}
@@ -18,21 +17,20 @@ button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;bac
 .timer-full{position:fixed;inset:0;background:#fff;display:none;align-items:center;justify-content:center;font-size:72px;z-index:999}
 .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
 .day{padding:8px;text-align:center;border-radius:8px;background:#e5e7eb}
-.fire{background:#fde68a}
-.flash{animation:flash .6s}
-@keyframes flash{0%{background:#000;color:#fff}100%{background:#f8fafc;color:#0f172a}}
 </style>
 </head>
-
 <body>
 
+<!-- スタート画面 -->
 <div id="start" class="screen active">
   <h1>📚 Self Growth App</h1>
   <button onclick="newStart()">新規スタート</button>
 </div>
 
+<!-- ホーム画面 -->
 <div id="home" class="screen">
 
+  <!-- レベル・EXP・ストリーク・週間残り -->
   <div class="card">
     Lv <span id="level"></span>
     <div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
@@ -40,41 +38,64 @@ button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;bac
     ⏳ 週間残り <span id="weeklyRemain"></span>
   </div>
 
+  <!-- 週間目標設定 -->
   <div class="card">
     <h3>週間目標（時間）</h3>
     <input id="weeklyInput" type="number" placeholder="例: 20">
     <button onclick="updateWeekly()">設定</button>
   </div>
 
-<div class="card">
-  <h3>✍️ 手動記録</h3>
-  <select id="manualSubject"></select>
-  <input id="manualHour" type="number" placeholder="時間" min="0">
-  <input id="manualMin" type="number" placeholder="分" min="0" max="59">
-  <button onclick="saveManual()">記録する</button>
-</div>
+  <!-- 手動記録 -->
+  <div class="card">
+    <h3>✍️ 手動記録</h3>
+    <select id="manualSubject"></select>
+    <input id="manualHour" type="number" placeholder="時間" min="0">
+    <input id="manualMin" type="number" placeholder="分" min="0" max="59">
+    <button onclick="saveManual()">記録する</button>
+  </div>
 
-<div class="card">
-  <h3>🧠 AI学習分析</h3>
-  <select id="targetUniv">
-    <option value="waseda_sho">早稲田 商</option>
-  </select>
-  <button onclick="runAI()">分析する</button>
-  <div id="aiResult"></div>
-</div>
+  <!-- AI学習分析 -->
+  <div class="card">
+    <h3>🧠 AI学習分析</h3>
+    <select id="targetUniv">
+      <option value="waseda_sho">早稲田 商</option>
+    </select>
+    <button onclick="runAI()">分析する</button>
+    <div id="aiResult"></div>
+  </div>
 
-<div class="card">
-  <h3>📊 模試成績入力</h3>
-  英語 <input id="mockEng" type="number">
-  世界史 <input id="mockWorld" type="number">
-  <button onclick="saveMock()">保存 & 分析</button>
-</div>
+  <!-- 模試成績 -->
+  <div class="card">
+    <h3>📊 模試成績入力</h3>
+    英語 <input id="mockEng" type="number">
+    世界史 <input id="mockWorld" type="number">
+    <button onclick="saveMock()">保存 & 分析</button>
+  </div>
 
+  <!-- 科目追加・削除 -->
+  <div class="card">
+    <h3>科目管理</h3>
+    <input id="newSubject" type="text" placeholder="新しい科目名">
+    <button onclick="addSubject()">科目追加</button>
+    <ul id="subjectList"></ul>
+  </div>
+
+  <!-- タイマー -->
+  <div class="card">
+    <h3>タイマー</h3>
+    <select id="timerSubject"></select>
+    <button id="start-btn">START</button>
+    <button id="stop-btn" disabled>STOP</button>
+    <button id="save-btn" style="display:none">保存</button>
+  </div>
+
+  <!-- カレンダー -->
   <div class="card">
     <h3>📅 カレンダー</h3>
     <div id="calendar" class="calendar"></div>
   </div>
 
+  <!-- 科目別グラフ -->
   <div class="card">
     <h3>📊 科目別グラフ</h3>
     <select onchange="changeGraph(this.value)">
@@ -89,6 +110,155 @@ button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;bac
 
 <div id="timerFull" class="timer-full">0:00</div>
 
-<script src="app.js"></script>
+<script>
+let subjects = [];
+let timerRunning = false;
+let elapsedSeconds = 0;
+let timerInterval = null;
+let currentSubject = null;
+
+const timerSubject = document.getElementById('timerSubject');
+const timerFull = document.getElementById('timerFull');
+const subjectList = document.getElementById('subjectList');
+
+// ===== 初期化 =====
+async function init(){
+  await loadSubjects();
+  renderCalendar();
+}
+init();
+
+// ===== 新規スタート =====
+function newStart(){
+  document.getElementById('start').classList.remove('active');
+  document.getElementById('home').classList.add('active');
+}
+
+// ===== 科目追加 =====
+async function addSubject(){
+  const name = document.getElementById('newSubject').value.trim();
+  if(!name) return alert("科目名を入力してください");
+
+  const res = await fetch('/api/subject',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({userId:'demo-user', name})
+  });
+  if(res.ok){
+    document.getElementById('newSubject').value='';
+    await loadSubjects();
+  }
+}
+
+// ===== 科目削除 =====
+async function deleteSubject(id){
+  subjects = subjects.filter(s=>s.id!==id);
+  await renderSubjectList();
+  await renderSubjectSelect();
+}
+
+// ===== 科目ロード =====
+async function loadSubjects(){
+  const res = await fetch('/api/subjects/demo-user');
+  subjects = await res.json();
+  await renderSubjectList();
+  await renderSubjectSelect();
+}
+
+async function renderSubjectList(){
+  subjectList.innerHTML='';
+  subjects.forEach(s=>{
+    const li=document.createElement('li');
+    li.textContent=s.name+' ';
+    const del=document.createElement('button');
+    del.textContent='削除';
+    del.onclick=()=>deleteSubject(s.id);
+    li.appendChild(del);
+    subjectList.appendChild(li);
+  });
+}
+
+async function renderSubjectSelect(){
+  const manual = document.getElementById('manualSubject');
+  manual.innerHTML='';
+  subjects.forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s.id; o.textContent=s.name;
+    manual.appendChild(o);
+  });
+
+  timerSubject.innerHTML='';
+  subjects.forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s.id; o.textContent=s.name;
+    timerSubject.appendChild(o);
+  });
+}
+
+// ===== タイマー =====
+document.getElementById('start-btn').addEventListener('click',()=>{
+  if(timerRunning) return;
+  const selected = timerSubject.value;
+  if(!selected) return alert("科目を選択してください");
+
+  currentSubject=selected;
+  timerRunning=true;
+  elapsedSeconds=0;
+
+  timerFull.style.display='flex';
+  timerFull.textContent='0:00';
+  timerFull.requestFullscreen?.();
+
+  document.getElementById('start-btn').disabled=true;
+  document.getElementById('stop-btn').disabled=false;
+
+  timerInterval = setInterval(()=>{
+    elapsedSeconds++;
+    const min=Math.floor(elapsedSeconds/60);
+    const sec=elapsedSeconds%60;
+    timerFull.textContent=`${min}:${sec.toString().padStart(2,'0')}`;
+  },1000);
+});
+
+document.getElementById('stop-btn').addEventListener('click',()=>{
+  if(!timerRunning) return;
+  clearInterval(timerInterval);
+  timerRunning=false;
+
+  document.getElementById('stop-btn').disabled=true;
+  document.getElementById('save-btn').style.display='block';
+});
+
+document.getElementById('save-btn').addEventListener('click',async()=>{
+  const minutes = Math.floor(elapsedSeconds/60);
+  if(minutes<=0) return alert("1分以上計測してください");
+
+  await fetch('/api/log',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({userId:'demo-user', subjectId:currentSubject, minutes})
+  });
+
+  elapsedSeconds=0;
+  timerFull.textContent='0:00';
+  timerFull.style.display='none';
+  document.getElementById('save-btn').style.display='none';
+  document.getElementById('start-btn').disabled=false;
+
+  alert("保存しました");
+});
+
+// ===== カレンダー描画 =====
+function renderCalendar(){
+  const calendar=document.getElementById('calendar');
+  calendar.innerHTML='';
+  for(let i=1;i<=30;i++){
+    const d=document.createElement('div');
+    d.className='day';
+    d.textContent=i;
+    calendar.appendChild(d);
+  }
+}
+</script>
 </body>
 </html>
