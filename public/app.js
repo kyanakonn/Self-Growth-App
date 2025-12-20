@@ -163,3 +163,27 @@ function saveMock(){
   $("aiResult").innerHTML = advice;
 }
 
+async function runRealAI() {
+  const targetUniv = "早稲田大学 商学部";
+
+  const mock = {
+    英語: Number($("mockEng").value),
+    世界史: Number($("mockWorld").value)
+  };
+
+  $("aiResult").textContent = "AI分析中…";
+
+  const r = await fetch("/api/ai-analysis", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      targetUniv,
+      mock
+    })
+  });
+
+  const d = await r.json();
+  $("aiResult").innerText = d.result;
+}
+
