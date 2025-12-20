@@ -14,20 +14,24 @@ button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;bac
 .exp-bar{height:16px;background:#e5e7eb;border-radius:10px;overflow:hidden}
 .exp-fill{height:100%;background:#0f172a;width:0%;transition:1s}
 .timer{font-size:40px;text-align:center}
-.timer-full{position:fixed;inset:0;background:#fff;display:none;align-items:center;justify-content:center;font-size:72px;z-index:999}
+.timer-full{position:fixed;inset:0;background:#fff;display:none;align-items:center;justify-content:center;flex-direction:column;font-size:72px;z-index:999}
+.timer-btns{margin-top:20px;width:80%;display:flex;justify-content:space-around}
+.timer-btns button{width:30%;font-size:18px}
 .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
 .day{padding:8px;text-align:center;border-radius:8px;background:#e5e7eb}
 </style>
 </head>
 <body>
 
-<!-- スタート画面 -->
 <div id="start" class="screen active">
   <h1>📚 Self Growth App</h1>
   <button onclick="newStart()">新規スタート</button>
+  <div style="margin-top:16px">
+    <input id="codeInput" type="text" placeholder="引き継ぎコード">
+    <button onclick="loginWithCode()">ログイン</button>
+  </div>
 </div>
 
-<!-- ホーム画面 -->
 <div id="home" class="screen">
 
   <!-- レベル・EXP・ストリーク・週間残り -->
@@ -108,7 +112,15 @@ button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;bac
 
 </div>
 
-<div id="timerFull" class="timer-full">0:00</div>
+<!-- 全画面タイマー -->
+<div id="timerFull" class="timer-full">
+  <div id="timerText">0:00</div>
+  <div class="timer-btns">
+    <button id="fullStartBtn">START</button>
+    <button id="fullStopBtn" disabled>STOP</button>
+    <button id="fullSaveBtn" style="display:none">保存</button>
+  </div>
+</div>
 
 <script>
 let subjects = [];
@@ -116,9 +128,11 @@ let timerRunning = false;
 let elapsedSeconds = 0;
 let timerInterval = null;
 let currentSubject = null;
+let userId = 'demo-user';
 
 const timerSubject = document.getElementById('timerSubject');
 const timerFull = document.getElementById('timerFull');
+const timerText = document.getElementById('timerText');
 const subjectList = document.getElementById('subjectList');
 
 // ===== 初期化 =====
@@ -132,6 +146,15 @@ init();
 function newStart(){
   document.getElementById('start').classList.remove('active');
   document.getElementById('home').classList.add('active');
+  awaitProfile();
+}
+
+// ===== 引き継ぎログイン =====
+function loginWithCode(){
+  const code = document.getElementById('codeInput').value.trim();
+  if(!code) return alert("コードを入力してください");
+  userId = code;
+  newStart();
 }
 
 // ===== 科目追加 =====
@@ -142,7 +165,7 @@ async function addSubject(){
   const res = await fetch('/api/subject',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({userId:'demo-user', name})
+    body: JSON.stringify({userId, name})
   });
   if(res.ok){
     document.getElementById('newSubject').value='';
@@ -159,7 +182,7 @@ async function deleteSubject(id){
 
 // ===== 科目ロード =====
 async function loadSubjects(){
-  const res = await fetch('/api/subjects/demo-user');
+  const res = await fetch(`/api/subjects/${userId}`);
   subjects = await res.json();
   await renderSubjectList();
   await renderSubjectSelect();
@@ -195,8 +218,40 @@ async function renderSubjectSelect(){
   });
 }
 
-// ===== タイマー =====
-document.getElementById('start-btn').addEventListener('click',()=>{
+// ===== 週間目標設定 =====
+async function updateWeekly(){
+  const val = parseInt(document.getElementById('weeklyInput').value);
+  if(isNaN(val) || val<=0) return alert("正しい数値を入力してください");
+
+  await fetch('/api/weekly-target',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({userId, minutes: val})
+  });
+
+  document.getElementById('weeklyRemain').textContent = val;
+}
+
+// ===== 手動記録 =====
+async function saveManual(){
+  const subj = document.getElementById('manualSubject').value;
+  const h = parseInt(document.getElementById('manualHour').value) || 0;
+  const m = parseInt(document.getElementById('manualMin').value) || 0;
+  const total = h*60 + m;
+  if(total<=0) return alert("1分以上入力してください");
+
+  await fetch('/api/log',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({userId, subjectId:subj, minutes:total})
+  });
+  alert("記録しました");
+  document.getElementById('manualHour').value='';
+  document.getElementById('manualMin').value='';
+}
+
+// ===== タイマー関数 =====
+function startTimer(){
   if(timerRunning) return;
   const selected = timerSubject.value;
   if(!selected) return alert("科目を選択してください");
@@ -206,47 +261,63 @@ document.getElementById('start-btn').addEventListener('click',()=>{
   elapsedSeconds=0;
 
   timerFull.style.display='flex';
-  timerFull.textContent='0:00';
-  timerFull.requestFullscreen?.();
-
+  timerText.textContent='0:00';
   document.getElementById('start-btn').disabled=true;
   document.getElementById('stop-btn').disabled=false;
+  document.getElementById('save-btn').style.display='none';
+  document.getElementById('fullStartBtn').disabled=true;
+  document.getElementById('fullStopBtn').disabled=false;
+  document.getElementById('fullSaveBtn').style.display='none';
 
   timerInterval = setInterval(()=>{
     elapsedSeconds++;
     const min=Math.floor(elapsedSeconds/60);
     const sec=elapsedSeconds%60;
-    timerFull.textContent=`${min}:${sec.toString().padStart(2,'0')}`;
+    timerText.textContent=`${min}:${sec.toString().padStart(2,'0')}`;
   },1000);
-});
+}
 
-document.getElementById('stop-btn').addEventListener('click',()=>{
+function stopTimer(){
   if(!timerRunning) return;
   clearInterval(timerInterval);
   timerRunning=false;
 
   document.getElementById('stop-btn').disabled=true;
   document.getElementById('save-btn').style.display='block';
-});
+  document.getElementById('fullStopBtn').disabled=true;
+  document.getElementById('fullSaveBtn').style.display='block';
+}
 
-document.getElementById('save-btn').addEventListener('click',async()=>{
+async function saveTimer(){
   const minutes = Math.floor(elapsedSeconds/60);
   if(minutes<=0) return alert("1分以上計測してください");
 
   await fetch('/api/log',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({userId:'demo-user', subjectId:currentSubject, minutes})
+    body: JSON.stringify({userId, subjectId:currentSubject, minutes})
   });
 
   elapsedSeconds=0;
-  timerFull.textContent='0:00';
+  timerText.textContent='0:00';
   timerFull.style.display='none';
   document.getElementById('save-btn').style.display='none';
   document.getElementById('start-btn').disabled=false;
+  document.getElementById('fullSaveBtn').style.display='none';
+  document.getElementById('fullStartBtn').disabled=false;
 
   alert("保存しました");
-});
+}
+
+// 通常ボタン
+document.getElementById('start-btn').addEventListener('click', startTimer);
+document.getElementById('stop-btn').addEventListener('click', stopTimer);
+document.getElementById('save-btn').addEventListener('click', saveTimer);
+
+// 全画面ボタン
+document.getElementById('fullStartBtn').addEventListener('click', startTimer);
+document.getElementById('fullStopBtn').addEventListener('click', stopTimer);
+document.getElementById('fullSaveBtn').addEventListener('click', saveTimer);
 
 // ===== カレンダー描画 =====
 function renderCalendar(){
