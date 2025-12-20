@@ -97,3 +97,52 @@ function updateWeekly(logs, target) {
     `あと ${Math.floor(remain / 60)}時間 ${remain % 60}分`;
 }
 
+let chart;
+
+function draw(type) {
+  fetch(`/api/logs/${userId}`)
+    .then(r => r.json())
+    .then(logs => {
+      const map = {};
+      logs.forEach(l => {
+        map[l.date] = (map[l.date] || 0) + l.minutes;
+      });
+
+      const labels = Object.keys(map);
+      const data = Object.values(map);
+
+      if (chart) chart.destroy();
+      chart = new Chart(document.getElementById("chart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "勉強時間（分）",
+            data,
+            backgroundColor: "#4caf50"
+          }]
+        }
+      });
+    });
+}
+
+function levelUpAnim() {
+  level.style.transform = "scale(1.5)";
+  setTimeout(() => {
+    level.style.transform = "scale(1)";
+  }, 600);
+}
+
+function drawCalendar(logs) {
+  calendar.innerHTML = "";
+  const set = new Set(logs.map(l => l.date));
+
+  for (let i = 1; i <= 31; i++) {
+    const d = document.createElement("div");
+    d.textContent = i;
+    if (set.has(new Date().toISOString().slice(0, 8) + String(i).padStart(2, "0"))) {
+      d.style.background = "#4caf50";
+    }
+    calendar.appendChild(d);
+  }
+}
