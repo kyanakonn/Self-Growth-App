@@ -46,6 +46,30 @@ button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;bac
     <button onclick="updateWeekly()">設定</button>
   </div>
 
+<div class="card">
+  <h3>✍️ 手動記録</h3>
+  <select id="manualSubject"></select>
+  <input id="manualHour" type="number" placeholder="時間" min="0">
+  <input id="manualMin" type="number" placeholder="分" min="0" max="59">
+  <button onclick="saveManual()">記録する</button>
+</div>
+
+<div class="card">
+  <h3>🧠 AI学習分析</h3>
+  <select id="targetUniv">
+    <option value="waseda_sho">早稲田 商</option>
+  </select>
+  <button onclick="runAI()">分析する</button>
+  <div id="aiResult"></div>
+</div>
+
+<div class="card">
+  <h3>📊 模試成績入力</h3>
+  英語 <input id="mockEng" type="number">
+  世界史 <input id="mockWorld" type="number">
+  <button onclick="saveMock()">保存 & 分析</button>
+</div>
+
   <div class="card">
     <h3>📅 カレンダー</h3>
     <div id="calendar" class="calendar"></div>
