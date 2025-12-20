@@ -2,51 +2,85 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Self Growth RPG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self Growth App</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
   margin:0;
-  background:radial-gradient(circle,#020617,#000);
-  color:#fff;
+  background:#f8fafc;
+  color:#0f172a;
   font-family:system-ui;
 }
+
 .screen{display:none;padding:16px}
 .screen.active{display:block}
+
 button{
-  width:100%;padding:14px;margin-top:8px;
-  border:none;border-radius:14px;
-  background:linear-gradient(90deg,#22c55e,#4ade80);
-  font-weight:700;
-}
-.card{
-  background:rgba(30,41,59,.85);
-  border-radius:16px;
+  width:100%;
   padding:14px;
-  margin-top:12px;
-  box-shadow:0 0 20px rgba(56,189,248,.2);
+  margin-top:8px;
+  border:none;
+  border-radius:14px;
+  font-size:16px;
+  font-weight:600;
+  background:#fff;
+  box-shadow:0 4px 12px rgba(0,0,0,.12);
 }
-.exp-bar{height:18px;background:#020617;border-radius:10px;overflow:hidden}
+
+button:disabled{opacity:.5}
+
+.card{
+  background:#fff;
+  border-radius:18px;
+  padding:16px;
+  margin-top:14px;
+  box-shadow:0 6px 20px rgba(0,0,0,.1);
+}
+
+.exp-bar{
+  height:16px;
+  background:#e5e7eb;
+  border-radius:10px;
+  overflow:hidden;
+}
 .exp-fill{
   height:100%;
-  background:linear-gradient(90deg,#38bdf8,#22c55e);
+  background:#0f172a;
+  width:0%;
   transition:1s;
 }
+
+.timer{
+  font-size:42px;
+  text-align:center;
+  margin:12px 0;
+}
+
 .timer-full{
-  position:fixed;inset:0;
-  background:#020617;
+  position:fixed;
+  inset:0;
+  background:#fff;
   display:none;
   align-items:center;
   justify-content:center;
-  font-size:64px;
-  z-index:10;
+  font-size:72px;
+  z-index:999;
 }
-.flash{animation:flash .6s}
-@keyframes flash{
-  0%{background:#fff;color:#000}
-  100%{background:#020617;color:#fff}
+
+.subject{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:6px;
+}
+.subject span{font-weight:600}
+.subject button{
+  width:auto;
+  padding:6px 10px;
+  font-size:14px;
 }
 </style>
 </head>
@@ -54,39 +88,36 @@ button{
 <body>
 
 <div id="start" class="screen active">
-  <h1>📚 Self Growth RPG</h1>
-  <button onclick="newStart()">▶ 冒険を始める</button>
+  <h1>📚 Self Growth App</h1>
+  <button onclick="newStart()">新規スタート</button>
 </div>
 
 <div id="home" class="screen">
+
   <div class="card">
-    Lv <span id="level"></span>
+    Lv <span id="level">1</span>
     <div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
-    🔥 <span id="streak"></span>日
-    ⏳ 残り <span id="weeklyRemain"></span>
+    🔥 <span id="streak">0</span>日  
   </div>
 
   <div class="card">
-    <h3>⚔ ジョブ選択</h3>
-    <button onclick="selectSubject('英語')">英語</button>
-    <button onclick="selectSubject('世界史')">世界史</button>
+    <h3>📘 科目</h3>
+    <div id="subjectList"></div>
+    <input id="newSubject" placeholder="科目を追加">
+    <button onclick="addSubject()">追加</button>
   </div>
 
   <div class="card">
-    <h3>⏱ 集中モード</h3>
-    <div id="timer">00:00</div>
-    <button onclick="startTimer()">START</button>
-    <button onclick="stopTimer()">STOP</button>
-    <button onclick="saveTimer()">SAVE</button>
+    <h3>⏱ タイマー（<span id="currentSubject"></span>）</h3>
+    <div id="timer" class="timer">0:00</div>
+    <button id="startBtn" onclick="startTimer()">START</button>
+    <button id="stopBtn" onclick="stopTimer()" disabled>STOP</button>
+    <button id="saveBtn" onclick="saveTimer()" style="display:none">保存</button>
   </div>
 
-  <div class="card">
-    <h3>📊 成長グラフ</h3>
-    <canvas id="chart"></canvas>
-  </div>
 </div>
 
-<div id="timerFull" class="timer-full"></div>
+<div id="timerFull" class="timer-full">0:00</div>
 
 <script src="app.js"></script>
 </body>
