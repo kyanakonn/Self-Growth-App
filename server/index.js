@@ -13,7 +13,8 @@ app.use(cors());
 app.use(express.json());
 
 // ===== public（※APIだけ使うなら不要だが安全のため）=====
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "../public")));
+
 
 // ===== DB =====
 const db = new sqlite3.Database("./db.sqlite");
