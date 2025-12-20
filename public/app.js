@@ -89,3 +89,77 @@ function bonusEffect(){
   alert("🎉 100時間達成！おめでとう！");
   setTimeout(()=>document.body.classList.remove("flash"),600);
 }
+
+/* ===== 手動記録 ===== */
+async function saveManual(){
+  const sub = $("manualSubject").value;
+  const h = Number($("manualHour").value||0);
+  const m = Number($("manualMin").value||0);
+  const minutes = h*60+m;
+  if(minutes<=0) return;
+
+  await fetch("/api/log",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      userId,
+      subjectId:sub,
+      minutes
+    })
+  });
+
+  $("manualHour").value="";
+  $("manualMin").value="";
+  loadProfile();
+}
+
+/* ===== AI分析 ===== */
+async function runAI(){
+  const logs = await (await fetch(`/api/logs/${userId}`)).json();
+  const total = {};
+  logs.forEach(l=>{
+    total[l.subjectId]=(total[l.subjectId]||0)+l.minutes;
+  });
+
+  const target = {
+    waseda_sho:{
+      英語:0.45,
+      世界史:0.35,
+      国語:0.20
+    }
+  };
+
+  let msg = "📈 学習分析結果<br>";
+
+  const sum = Object.values(total).reduce((a,b)=>a+b,0);
+
+  for(const s in target.waseda_sho){
+    const actual = (total[s]||0)/sum;
+    const diff = actual - target.waseda_sho[s];
+
+    if(diff > 0.1){
+      msg += `⚠ ${s}に時間をかけすぎています<br>`;
+    }else if(diff < -0.1){
+      msg += `⚠ ${s}の勉強時間が不足しています<br>`;
+    }else{
+      msg += `✅ ${s}の配分は理想的です<br>`;
+    }
+  }
+
+  msg += "<br>👉 次週は不足科目を重点強化しましょう。";
+  $("aiResult").innerHTML = msg;
+}
+
+/* ===== 模試 ===== */
+function saveMock(){
+  const eng = Number($("mockEng").value);
+  const world = Number($("mockWorld").value);
+
+  let advice = "🎯 模試分析<br>";
+
+  if(eng<70) advice+="英語は毎日1.5倍に増やしましょう<br>";
+  if(world<65) advice+="世界史は通史の復習を優先<br>";
+
+  $("aiResult").innerHTML = advice;
+}
+
