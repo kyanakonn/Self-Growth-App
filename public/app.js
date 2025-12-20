@@ -81,3 +81,19 @@ function loadProfile() {
       level.textContent = `Lv.${p.level} EXP:${p.exp}`;
     });
 }
+
+function updateWeekly(logs, target) {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - now.getDay() + 1);
+
+  let sum = 0;
+  logs.forEach(l => {
+    if (new Date(l.date) >= monday) sum += l.minutes;
+  });
+
+  const remain = Math.max(0, target - sum);
+  weeklyRemain.textContent =
+    `あと ${Math.floor(remain / 60)}時間 ${remain % 60}分`;
+}
+
