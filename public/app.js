@@ -1,4 +1,8 @@
-const API = "";
+// ★★★★★こっこ★★★★★
+const API = location.origin.includes("render")
+  ? location.origin
+  : "http://localhost:3000";
+// ★★★★★★★★★★★★★★★★★★★
 
 const loginScreen = document.getElementById("loginScreen");
 const appScreen = document.getElementById("appScreen");
@@ -23,16 +27,33 @@ let startTime = null;
 let selectedSubject = null;
 let timerInterval = null;
 
+/* ======== デバッグ表示 ======== */
+function debug(msg) {
+  console.log("[DEBUG]", msg);
+}
+
 /* ========= ログイン ========= */
 
 newBtn.onclick = () => {
-  fetch("/api/login", { method: "POST" })
-    .then(res => res.json())
-    .then(data => initApp(data.userId));
+  debug("新規スタート押下");
+
+  fetch(`${API}/api/login`, { method: "POST" })
+    .then(res => {
+      debug("レスポンス受信");
+      return res.json();
+    })
+    .then(data => {
+      debug("ユーザーID: " + data.userId);
+      initApp(data.userId);
+    })
+    .catch(err => {
+      alert("通信エラー。サーバーが起動していません");
+      console.error(err);
+    });
 };
 
 loginBtn.onclick = () => {
-  fetch("/api/login", {
+  fetch(`${API}/api/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ code: codeInput.value })
@@ -52,7 +73,7 @@ function initApp(id) {
 /* ========= 科目 ========= */
 
 function loadSubjects() {
-  fetch(`/api/subjects/${userId}`)
+  fetch(`${API}/api/subjects/${userId}`)
     .then(r => r.json())
     .then(list => {
       subjectList.innerHTML = "";
@@ -66,7 +87,7 @@ function loadSubjects() {
 }
 
 document.getElementById("addSubjectBtn").onclick = () => {
-  fetch("/api/subject", {
+  fetch(`${API}/api/subject`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId, name: subjectInput.value })
@@ -103,7 +124,7 @@ stopBtn.onclick = () => {
 saveBtn.onclick = () => {
   const minutes = Math.floor((Date.now() - startTime) / 60000);
 
-  fetch("/api/log", {
+  fetch(`${API}/api/log`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -122,7 +143,7 @@ saveBtn.onclick = () => {
 /* ========= プロフィール ========= */
 
 function loadProfile() {
-  fetch(`/api/profile/${userId}`)
+  fetch(`${API}/api/profile/${userId}`)
     .then(r => r.json())
     .then(p => {
       levelText.textContent = `Lv.${p.level} EXP:${p.exp}`;
@@ -133,7 +154,7 @@ function loadProfile() {
 /* ========= 週間目標 ========= */
 
 function updateWeekly(target) {
-  fetch(`/api/logs/${userId}`)
+  fetch(`${API}/api/logs/${userId}`)
     .then(r => r.json())
     .then(logs => {
       const now = new Date();
@@ -148,31 +169,5 @@ function updateWeekly(target) {
       const remain = Math.max(0, target - sum);
       weeklyRemain.textContent =
         `あと ${Math.floor(remain / 60)}時間 ${remain % 60}分`;
-    });
-}
-
-/* ========= グラフ ========= */
-
-let chart;
-function drawGraph() {
-  fetch(`/api/logs/${userId}`)
-    .then(r => r.json())
-    .then(logs => {
-      const map = {};
-      logs.forEach(l => {
-        map[l.date] = (map[l.date] || 0) + l.minutes;
-      });
-
-      if (chart) chart.destroy();
-      chart = new Chart(document.getElementById("chart"), {
-        type: "bar",
-        data: {
-          labels: Object.keys(map),
-          datasets: [{
-            data: Object.values(map),
-            label: "勉強時間（分）"
-          }]
-        }
-      });
     });
 }
