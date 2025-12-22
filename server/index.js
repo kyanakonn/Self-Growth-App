@@ -59,6 +59,18 @@ db.serialize(() => {
   `);
 });
 
+
+　db.run(`
+  CREATE TABLE IF NOT EXISTS exams (
+    id TEXT,
+    userId TEXT,
+    subject TEXT,
+    score INTEGER,
+    date TEXT
+  )
+`);
+
+
 /* ===== ヘルスチェック ===== */
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
