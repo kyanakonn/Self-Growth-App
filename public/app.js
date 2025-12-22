@@ -1,189 +1,190 @@
 let userId = localStorage.getItem("userId");
-let chart;
-const $ = id => document.getElementById(id);
 
-if(userId) init();
+/* ===== データ ===== */
+let subjects = ["英語","世界史"];
+let colors = {};
+let logs = [];
+let profile = { level:1, exp:0, totalMin:0 };
 
+let chart, mode="day";
+
+/* ===== 起動 ===== */
+switchScreen("start");
+
+/* ===== スタート ===== */
 async function newStart(){
-  const r = await fetch("/api/login",{method:"POST"});
-  const d = await r.json();
-  userId = d.userId;
-  localStorage.setItem("userId",userId);
-  init();
+ userId="USER-"+Date.now().toString(36);
+ localStorage.setItem("userId",userId);
+
+ await saveServer();
+ init();
+ switchScreen("home");
 }
 
-async function init(){
-  $("start").classList.remove("active");
-  $("home").classList.add("active");
-  loadProfile();
-  loadCalendar();
-  loadGraph(7);
+async function login(){
+ if(!codeInput.value) return;
+ userId=codeInput.value;
+ localStorage.setItem("userId",userId);
+
+ const data = await loadServer();
+ if(!data) return alert("データが見つかりません");
+
+ ({subjects,colors,logs,profile} = data);
+ init();
+ switchScreen("home");
 }
 
-/* ===== プロフィール ===== */
-async function loadProfile(){
-  const p = await (await fetch(`/api/profile/${userId}`)).json();
-  $("level").textContent=p.level;
-  $("streak").textContent=p.streak;
-
-  const used = Math.floor(p.totalMinutes/60);
-  const remain = Math.max(0,Math.floor(p.weeklyTarget/60)-used);
-  $("weeklyRemain").textContent = remain>0 ? remain+"h" : "達成！";
-
-  $("expFill").style.width = `${(p.exp/(p.level*p.level*100))*100}%`;
-
-  if(Math.floor(p.totalMinutes/6000)>localStorage.getItem("bonus")){
-    bonusEffect();
-    localStorage.setItem("bonus",Math.floor(p.totalMinutes/6000));
-  }
+/* ===== サーバー ===== */
+async function loadServer(){
+ const res = await fetch(`/api/user/${userId}`);
+ return await res.json();
 }
 
-/* ===== 週間目標 ===== */
-async function updateWeekly(){
-  const h = Number($("weeklyInput").value);
-  await fetch("/api/weekly",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({userId,minutes:h*60})});
-  loadProfile();
+async function saveServer(){
+ await fetch(`/api/user/${userId}`,{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({subjects,colors,logs,profile})
+ });
 }
 
-/* ===== カレンダー ===== */
-async function loadCalendar(){
-  const logs = await (await fetch(`/api/logs/${userId}`)).json();
-  const days = [...new Set(logs.map(l=>l.date))];
-  const cal = $("calendar");
-  cal.innerHTML="";
-  for(let i=1;i<=30;i++){
-    const d = document.createElement("div");
-    d.className="day";
-    if(days.some(x=>x.endsWith(`-${String(i).padStart(2,"0")}`))){
-      d.classList.add("fire");
-      d.textContent="🔥";
-    }else d.textContent=i;
-    cal.appendChild(d);
-  }
+/* ===== 初期化 ===== */
+function init(){
+ renderSubjects();
+ initChart();
+ updateProfile();
+ drawChart();
+}
+
+/* ===== UI ===== */
+function switchScreen(id){
+ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+}
+
+function goProfile(){
+ pLevel.textContent=profile.level;
+ pExp.textContent=profile.exp;
+ pTime.textContent=(profile.totalMin/60).toFixed(1);
+ pCode.textContent=userId;
+ switchScreen("profile");
+}
+function goHome(){switchScreen("home")}
+
+/* ===== 科目 ===== */
+function renderSubjects(){
+ manualSubject.innerHTML="";
+ timerSubject.innerHTML="";
+ subjects.forEach(s=>{
+  if(!colors[s]) colors[s]=`hsl(${Math.random()*360},70%,50%)`;
+  manualSubject.add(new Option(s,s));
+  timerSubject.add(new Option(s,s));
+ });
+}
+
+async function addSubject(){
+ if(!newSub.value) return;
+ subjects.push(newSub.value);
+ newSub.value="";
+ renderSubjects();
+ drawChart();
+ await saveServer();
+}
+
+/* ===== 記録 ===== */
+async function manualSave(){
+ const min=(+h.value||0)*60+(+m.value||0);
+ if(min>0) await addLog(manualSubject.value,min);
+}
+
+async function addLog(sub,min){
+ const today=new Date().toISOString().slice(0,10);
+ profile.totalMin+=min;
+ profile.exp+=min;
+ logs.push({date:today,sub,min});
+
+ checkLevel();
+ await saveServer();
+ updateProfile();
+ drawChart();
+}
+
+/* ===== レベル ===== */
+function checkLevel(){
+ let up=false;
+ while(profile.exp>=30*Math.pow(profile.level,1.9)){
+  profile.exp-=30*Math.pow(profile.level,1.9);
+  profile.level++;
+  up=true;
+ }
+ if(up) alert(`🎉 ${profile.level}レベルにレベルアップしました！`);
+}
+
+function updateProfile(){
+ level.textContent=profile.level;
+ const need=30*Math.pow(profile.level,1.9);
+ expFill.style.width=Math.min(profile.exp/need*100,100)+"%";
 }
 
 /* ===== グラフ ===== */
-async function loadGraph(type){
-  const logs = await (await fetch(`/api/logs/${userId}`)).json();
-  const data = {};
-  logs.forEach(l=>{
-    data[l.subjectId]=(data[l.subjectId]||0)+l.minutes;
-  });
+function changeMode(m){mode=m;drawChart();}
 
-  if(chart) chart.destroy();
-  chart = new Chart($("chart"),{
-    type:"bar",
-    data:{
-      labels:Object.keys(data),
-      datasets:[{data:Object.values(data),backgroundColor:"#0f172a"}]
-    }
-  });
+function initChart(){
+ chart=new Chart(document.getElementById("chart"),{
+  type:"bar",
+  data:{labels:[],datasets:[]},
+  options:{responsive:true}
+ });
 }
 
-function changeGraph(v){ loadGraph(v); }
+function drawChart(){
+ const map={};
+ logs.forEach(l=>{
+  map[l.date]=map[l.date]||{};
+  map[l.date][l.sub]=(map[l.date][l.sub]||0)+l.min/60;
+ });
 
-/* ===== 覚醒演出 ===== */
-function bonusEffect(){
-  document.body.classList.add("flash");
-  alert("🎉 100時間達成！おめでとう！");
-  setTimeout(()=>document.body.classList.remove("flash"),600);
+ chart.data.labels=Object.keys(map);
+ chart.data.datasets=subjects.map(s=>({
+  label:s,
+  backgroundColor:colors[s],
+  data:chart.data.labels.map(k=>map[k][s]||0)
+ }));
+ chart.update();
 }
 
-/* ===== 手動記録 ===== */
-async function saveManual(){
-  const sub = $("manualSubject").value;
-  const h = Number($("manualHour").value||0);
-  const m = Number($("manualMin").value||0);
-  const minutes = h*60+m;
-  if(minutes<=0) return;
+/* ===== タイマー ===== */
+let sec=0,timer=null;
 
-  await fetch("/api/log",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      userId,
-      subjectId:sub,
-      minutes
-    })
-  });
-
-  $("manualHour").value="";
-  $("manualMin").value="";
-  loadProfile();
+function openTimer(){
+ sec=0;
+ timerText.textContent="0:00";
+ startBtn.disabled=false;
+ startBtn.classList.remove("hidden");
+ stopBtn.classList.add("hidden");
+ saveBtn.classList.add("hidden");
+ timerFull.style.display="flex";
 }
 
-/* ===== AI分析 ===== */
-async function runAI(){
-  const logs = await (await fetch(`/api/logs/${userId}`)).json();
-  const total = {};
-  logs.forEach(l=>{
-    total[l.subjectId]=(total[l.subjectId]||0)+l.minutes;
-  });
-
-  const target = {
-    waseda_sho:{
-      英語:0.45,
-      世界史:0.35,
-      国語:0.20
-    }
-  };
-
-  let msg = "📈 学習分析結果<br>";
-
-  const sum = Object.values(total).reduce((a,b)=>a+b,0);
-
-  for(const s in target.waseda_sho){
-    const actual = (total[s]||0)/sum;
-    const diff = actual - target.waseda_sho[s];
-
-    if(diff > 0.1){
-      msg += `⚠ ${s}に時間をかけすぎています<br>`;
-    }else if(diff < -0.1){
-      msg += `⚠ ${s}の勉強時間が不足しています<br>`;
-    }else{
-      msg += `✅ ${s}の配分は理想的です<br>`;
-    }
-  }
-
-  msg += "<br>👉 次週は不足科目を重点強化しましょう。";
-  $("aiResult").innerHTML = msg;
+function startTimer(){
+ if(timer) return;
+ startBtn.disabled=true;
+ stopBtn.classList.remove("hidden");
+ timer=setInterval(()=>{
+  sec++;
+  timerText.textContent=
+   Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0");
+ },1000);
 }
 
-/* ===== 模試 ===== */
-function saveMock(){
-  const eng = Number($("mockEng").value);
-  const world = Number($("mockWorld").value);
-
-  let advice = "🎯 模試分析<br>";
-
-  if(eng<70) advice+="英語は毎日1.5倍に増やしましょう<br>";
-  if(world<65) advice+="世界史は通史の復習を優先<br>";
-
-  $("aiResult").innerHTML = advice;
+function stopTimer(){
+ clearInterval(timer);
+ timer=null;
+ saveBtn.classList.remove("hidden");
 }
 
-async function runRealAI() {
-  const targetUniv = "早稲田大学 商学部";
-
-  const mock = {
-    英語: Number($("mockEng").value),
-    世界史: Number($("mockWorld").value)
-  };
-
-  $("aiResult").textContent = "AI分析中…";
-
-  const r = await fetch("/api/ai-analysis", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId,
-      targetUniv,
-      mock
-    })
-  });
-
-  const d = await r.json();
-  $("aiResult").innerText = d.result;
+async function saveTimer(){
+ timerFull.style.display="none";
+ if(sec>0) await addLog(timerSubject.value,Math.floor(sec/60));
+ sec=0;
 }
-
