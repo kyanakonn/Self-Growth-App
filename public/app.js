@@ -238,3 +238,35 @@ async function saveTimer(){
  }
  sec = 0;
 }
+
+/* =====================
+   AI分析
+===================== */
+async function openAI(){
+ const res = await fetch("/api/ai-analysis",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({ userId })
+ });
+
+ const data = await res.json();
+
+ aiDate.textContent = `📅 ${data.date}`;
+ aiTotal.textContent = data.totalHours;
+ aiProgress.textContent = data.progress;
+
+ aiSubjects.innerHTML = "";
+ data.analysis.forEach(a=>{
+  const div = document.createElement("div");
+  div.className = "card";
+  div.innerHTML = `
+    <h3>${a.subject}</h3>
+    <p>学習時間：${a.minutes} 分</p>
+    <p>${a.comment}</p>
+  `;
+  aiSubjects.appendChild(div);
+ });
+
+ aiOverall.textContent = data.overall;
+ switchScreen("ai");
+}
