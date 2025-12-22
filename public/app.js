@@ -62,7 +62,6 @@ async function loadAll(){
  // 初回科目
  if(subjects.length === 0){
   await addSubject("英語");
-  await addSubject("世界史");
   subjects = await fetch(`/api/subjects/${userId}`).then(r=>r.json());
  }
 
