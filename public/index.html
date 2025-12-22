@@ -4,23 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Self Growth App</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-body{margin:0;background:#f8fafc;color:#0f172a;font-family:system-ui}
-.screen{display:none;padding:16px}
-.screen.active{display:block}
-button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.12)}
-.card{background:#fff;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 6px 20px rgba(0,0,0,.1)}
-.exp-bar{height:16px;background:#e5e7eb;border-radius:10px;overflow:hidden}
-.exp-fill{height:100%;background:#0f172a;width:0%;transition:width .8s}
-.timer-full{position:fixed;inset:0;background:#fff;display:none;align-items:center;justify-content:center;flex-direction:column;font-size:72px;z-index:999}
-.timer-btns{display:flex;gap:12px;margin-top:24px}
-</style>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
+<!-- ===== スタート画面 ===== -->
 <div id="start" class="screen active">
 <h1>📚 Self Growth App</h1>
 <button onclick="newStart()">新規スタート</button>
@@ -29,6 +20,7 @@ button{width:100%;padding:14px;margin-top:8px;border:none;border-radius:14px;bac
 <div id="startCode"></div>
 </div>
 
+<!-- ===== ホーム ===== -->
 <div id="home" class="screen">
 <button onclick="goProfile()">👤 プロフィール</button>
 
@@ -61,9 +53,10 @@ Lv <span id="level"></span>
 <canvas id="chart"></canvas>
 </div>
 
-<button onclick="startTimer()">⏱ タイマー</button>
+<button onclick="openTimer()">⏱ タイマー</button>
 </div>
 
+<!-- ===== プロフィール ===== -->
 <div id="profile" class="screen">
 <button onclick="goHome()">← 戻る</button>
 <div class="card">
@@ -74,230 +67,17 @@ Lv <span id="level"></span>
 </div>
 </div>
 
+<!-- ===== タイマー ===== -->
 <div id="timerFull" class="timer-full">
+<select id="timerSubject"></select>
 <div id="timerText">0:00</div>
 <div class="timer-btns">
-<button onclick="stopTimer()">STOP</button>
-<button onclick="saveTimer()">保存</button>
+<button id="startBtn" onclick="startTimer()">START</button>
+<button id="stopBtn" class="hidden" onclick="stopTimer()">STOP</button>
+<button id="saveBtn" class="hidden" onclick="saveTimer()">保存</button>
 </div>
 </div>
 
-<script>
-/* ===== データ ===== */
-let userId = localStorage.getItem("userId");
-let subjects = JSON.parse(localStorage.getItem("subjects")) || ["英語","世界史"];
-let colors = JSON.parse(localStorage.getItem("colors")) || {};
-let logs = JSON.parse(localStorage.getItem("logs")) || [];
-
-let profile = JSON.parse(localStorage.getItem("profile")) || {
- level:1,
- exp:0,
- totalMin:0,
- streak:0,
- lastDate:null
-};
-
-/* ===== 初期化 ===== */
-if(userId){
- switchScreen("home");
- init();
-}
-
-function newStart(){
- userId = "USER-"+Date.now().toString(36);
- localStorage.setItem("userId",userId);
- startCode.textContent = "引き継ぎコード: "+userId;
- saveAll();
- switchScreen("home");
- init();
-}
-
-function login(){
- userId = codeInput.value;
- localStorage.setItem("userId",userId);
- switchScreen("home");
- init();
-}
-
-function init(){
- renderSubjects();
- initChart();
- updateProfile();
- drawChart();
-}
-
-function saveAll(){
- localStorage.setItem("subjects",JSON.stringify(subjects));
- localStorage.setItem("colors",JSON.stringify(colors));
- localStorage.setItem("logs",JSON.stringify(logs));
- localStorage.setItem("profile",JSON.stringify(profile));
-}
-
-/* ===== UI ===== */
-function switchScreen(id){
- document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
- document.getElementById(id).classList.add("active");
-}
-
-function goProfile(){
- pLevel.textContent = profile.level;
- pExp.textContent = profile.exp;
- pTime.textContent = (profile.totalMin/60).toFixed(1);
- pCode.textContent = userId;
- switchScreen("profile");
-}
-function goHome(){switchScreen("home")}
-
-/* ===== 科目 ===== */
-function renderSubjects(){
- manualSubject.innerHTML="";
- subjects.forEach(s=>{
-  if(!colors[s]){
-   colors[s]=`hsl(${Math.random()*360},70%,50%)`;
-  }
-  const o=document.createElement("option");
-  o.textContent=s;
-  manualSubject.appendChild(o);
- });
- saveAll();
-}
-
-function addSubject(){
- if(!newSub.value) return;
- subjects.push(newSub.value);
- newSub.value="";
- renderSubjects();
- drawChart();
-}
-
-/* ===== 記録（EXP計算改修済み） ===== */
-function manualSave(){
- const min=(+h.value||0)*60+(+m.value||0);
- if(min<=0) return;
- addLog(manualSubject.value,min);
-}
-
-function addLog(sub,min){
- const today = new Date().toISOString().slice(0,10);
-
- // 連続記録判定
- if(profile.lastDate){
-  const diff = (new Date(today) - new Date(profile.lastDate)) / 86400000;
-  if(diff === 1){
-   profile.streak++;
-  }else if(diff > 1){
-   profile.streak = 1;
-  }
- }else{
-  profile.streak = 1;
- }
- profile.lastDate = today;
-
- // EXP計算
- let baseExp = min;
- const streakBonus = Math.min(1 + profile.streak * 0.03, 2);
- let gainedExp = baseExp * streakBonus;
-
- // 100時間ボーナス
- const before100 = Math.floor(profile.totalMin / 6000);
- profile.totalMin += min;
- const after100 = Math.floor(profile.totalMin / 6000);
- if(after100 > before100){
-  gainedExp += 2000;
- }
-
- profile.exp += Math.floor(gainedExp);
- logs.push({date:today,sub,min});
-
- checkLevel();
- saveAll();
- updateProfile();
- drawChart();
-}
-
-/* ===== レベル計算（3000時間≒Lv100） ===== */
-function checkLevel(){
- while(true){
-  const need = Math.floor(30 * Math.pow(profile.level, 1.9));
-  if(profile.exp < need) break;
-  profile.exp -= need;
-  profile.level++;
- }
-}
-
-function updateProfile(){
- level.textContent = profile.level;
- const need = 30 * Math.pow(profile.level, 1.9);
- expFill.style.width = Math.min(profile.exp / need * 100, 100) + "%";
-}
-
-/* ===== グラフ ===== */
-let chart, mode="day";
-
-function changeMode(m){mode=m; drawChart();}
-
-function initChart(){
- chart=new Chart(document.getElementById("chart"),{
-  type:"bar",
-  data:{labels:[],datasets:[]},
-  options:{responsive:true}
- });
-}
-
-function drawChart(){
- const map={};
- logs.forEach(l=>{
-  const d=new Date(l.date);
-  let key = mode==="day"?l.date : mode==="week"?d.getDay() : d.getDate();
-  map[key]=map[key]||{total:0};
-  map[key][l.sub]=(map[key][l.sub]||0)+l.min/60;
-  map[key].total+=l.min/60;
- });
-
- const keys=Object.keys(map).sort();
- chart.data.labels=keys;
-
- chart.data.datasets=[
-  ...subjects.map(s=>({
-   label:s,
-   backgroundColor:colors[s],
-   data:keys.map(k=>map[k][s]||0)
-  })),
-  {
-   label:"合計",
-   backgroundColor:"#94a3b8",
-   data:keys.map(k=>map[k].total)
-  }
- ];
- chart.update();
-}
-
-/* ===== タイマー ===== */
-let sec=0,timerInt=null;
-
-function startTimer(){
- if(timerInt) return;
- sec=0;
- timerText.textContent="0:00";
- timerFull.style.display="flex";
- timerInt=setInterval(()=>{
-  sec++;
-  timerText.textContent=
-   Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0");
- },1000);
-}
-
-function stopTimer(){
- clearInterval(timerInt);
- timerInt=null;
-}
-
-function saveTimer(){
- stopTimer();
- timerFull.style.display="none";
- addLog(manualSubject.value,Math.floor(sec/60));
- sec=0;
-}
-</script>
+<script src="app.js"></script>
 </body>
 </html>
