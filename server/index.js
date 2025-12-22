@@ -211,32 +211,74 @@ app.post("/api/weekly-target", (req, res) => {
   );
 });
 
-/* ===== 疑似AI分析 ===== */
+// ===== AI分析（早稲田商学部特化・疑似AI） =====
 app.post("/api/ai-analysis", (req, res) => {
   const { userId } = req.body;
+  const today = new Date().toISOString().slice(0, 10);
 
   db.all(
     `
     SELECT s.name, SUM(l.minutes) as minutes
     FROM logs l
     JOIN subjects s ON l.subjectId = s.id
-    WHERE l.userId=?
-    GROUP BY s.id
+    WHERE l.userId=? AND l.date=?
+    GROUP BY s.name
     `,
-    [userId],
+    [userId, today],
     (e, rows) => {
-      const result = rows.map(r => ({
-        subject: r.name,
-        minutes: r.minutes,
-        advice:
-          r.minutes < 180
-            ? "この科目は勉強時間を増やしましょう"
-            : "順調です"
-      }));
-      res.json({ result });
+      db.get(
+        "SELECT totalMinutes FROM profile WHERE userId=?",
+        [userId],
+        (e, p) => {
+          const totalHours = (p.totalMinutes / 60).toFixed(1);
+          const progress = Math.min(
+            Math.floor((p.totalMinutes / (3000 * 60)) * 100),
+            100
+          );
+
+          const subjects = ["英語", "世界史", "国語"];
+          const analysis = subjects.map(sub => {
+            const row = rows.find(r => r.name === sub);
+            const min = row ? row.minutes : 0;
+
+            let praise =
+              min === 0
+                ? "今日はまだですが、焦らなくて大丈夫。明日が本番です。"
+                : min < 60
+                ? "短時間でも机に向かったのが素晴らしいです。"
+                : min < 120
+                ? "とても良いペースです。この積み重ねが合格に直結します。"
+                : "完璧です。早稲田商学部レベルの学習量です。";
+
+            return {
+              subject: sub,
+              minutes: min,
+              comment: praise
+            };
+          });
+
+          let overall =
+            progress < 10
+              ? "スタートとしては十分。今は習慣化できていることが最大の成果です。"
+              : progress < 40
+              ? "基礎を積み上げる最高の時期です。確実に合格へ近づいています。"
+              : progress < 70
+              ? "早稲田商学部合格圏内が見えてきました。非常に順調です。"
+              : "完成度がかなり高いです。自信を持ってください。";
+
+          res.json({
+            date: today,
+            totalHours,
+            progress,
+            analysis,
+            overall
+          });
+        }
+      );
     }
   );
 });
+
 
 /* ===== 起動 ===== */
 const PORT = process.env.PORT || 3000;
