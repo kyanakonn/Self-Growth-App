@@ -78,6 +78,27 @@ Lv <span id="level"></span>
 </div>
 </div>
 
+<button onclick="openAI()">🤖 AI分析</button>
+<div id="ai" class="screen">
+<button onclick="goHome()">← 戻る</button>
+
+<div class="card">
+<h2>🤖 AI学習分析（早稲田商学部）</h2>
+<p id="aiDate"></p>
+<p><b>総学習時間：</b><span id="aiTotal"></span> 時間</p>
+<p><b>3000時間進捗：</b><span id="aiProgress"></span>%</p>
+</div>
+
+<div id="aiSubjects"></div>
+
+<div class="card">
+<h3>📈 総合評価</h3>
+<p id="aiOverall"></p>
+</div>
+</div>
+
+
+
 <script src="app.js"></script>
 </body>
 </html>
