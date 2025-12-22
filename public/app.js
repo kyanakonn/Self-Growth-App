@@ -270,3 +270,34 @@ async function openAI(){
  aiOverall.textContent = data.overall;
  switchScreen("ai");
 }
+
+async function openAI(){
+ const res = await fetch("/api/ai-analysis",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({ userId })
+ });
+ const d = await res.json();
+
+ aiStreak.textContent = `🔥 連続学習 ${d.streak} 日`;
+ aiProgress.textContent = `📊 3000時間進捗 ${d.progress}%`;
+ aiRecommend.textContent =
+  `🎯 今日の満点目安：${d.recommendMinutes} 分`;
+
+ aiSubjects.innerHTML="";
+ d.analysis.forEach(a=>{
+  const div=document.createElement("div");
+  div.className="card";
+  div.innerHTML=`
+   <h3>${a.subject}（${a.priority}）</h3>
+   <p>今日：${a.minutes} 分</p>
+   ${a.score!==null?`<p>模試偏差値：${a.score}</p>`:""}
+   <p>${a.comment}</p>
+  `;
+  aiSubjects.appendChild(div);
+ });
+
+ aiOverall.textContent=d.overall;
+ switchScreen("ai");
+}
+
