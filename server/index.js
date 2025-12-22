@@ -5,6 +5,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
+/* ===== 基本設定 ===== */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -12,13 +13,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ===== public =====
+// public 配信
 app.use(express.static(path.join(__dirname, "../public")));
 
-// ===== DB =====
+/* ===== DB ===== */
 const db = new sqlite3.Database("./db.sqlite");
 
-// ===== DB初期化 =====
+/* ===== DB初期化 ===== */
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -29,7 +30,7 @@ db.serialize(() => {
 
   db.run(`
     CREATE TABLE IF NOT EXISTS subjects (
-      id TEXT,
+      id TEXT PRIMARY KEY,
       userId TEXT,
       name TEXT
     )
@@ -37,7 +38,7 @@ db.serialize(() => {
 
   db.run(`
     CREATE TABLE IF NOT EXISTS logs (
-      id TEXT,
+      id TEXT PRIMARY KEY,
       userId TEXT,
       subjectId TEXT,
       minutes INTEGER,
@@ -58,57 +59,59 @@ db.serialize(() => {
   `);
 });
 
-// ===== ヘルスチェック =====
+/* ===== ヘルスチェック ===== */
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// ===== 新規 or 引き継ぎ =====
+/* ===== 新規 / 引き継ぎ ===== */
 app.post("/api/login", (req, res) => {
   const { code } = req.body;
 
+  // 引き継ぎ
   if (code) {
-    db.get("SELECT * FROM users WHERE id=?", [code], (e, row) => {
+    db.get("SELECT id FROM users WHERE id=?", [code], (err, row) => {
       if (!row) return res.status(404).json({ error: "not found" });
       res.json({ userId: code });
     });
-  } else {
-    const id = uuidv4();
-    db.run("INSERT INTO users VALUES (?,?)", [id, Date.now()]);
-    db.run(
-      "INSERT INTO profile VALUES (?,?,?,?,?,?,?)",
-      [id, 0, 1, 0, 0, 0, 600]
-    );
-    res.json({ userId: id });
+    return;
   }
+
+  // 新規
+  const userId = uuidv4();
+  db.run("INSERT INTO users VALUES (?,?)", [userId, Date.now()]);
+  db.run(
+    "INSERT INTO profile VALUES (?,?,?,?,?,?,?)",
+    [userId, 0, 1, 0, 0, 0, 600]
+  );
+  res.json({ userId });
 });
 
-// ===== 科目 =====
-app.post("/api/subject", (req, res) => {
-  const { userId, name } = req.body;
-  db.run("INSERT INTO subjects VALUES (?,?,?)", [
-    uuidv4(),
-    userId,
-    name
-  ]);
-  res.json({ ok: true });
-});
-
+/* ===== 科目 ===== */
 app.get("/api/subjects/:userId", (req, res) => {
   db.all(
     "SELECT * FROM subjects WHERE userId=?",
     [req.params.userId],
-    (e, r) => res.json(r)
+    (e, rows) => res.json(rows)
+  );
+});
+
+app.post("/api/subject", (req, res) => {
+  const { userId, name } = req.body;
+  db.run(
+    "INSERT INTO subjects VALUES (?,?,?)",
+    [uuidv4(), userId, name],
+    () => res.json({ ok: true })
   );
 });
 
 app.delete("/api/subject/:id", (req, res) => {
-  db.run("DELETE FROM subjects WHERE id=?", [req.params.id], () => {
-    res.json({ ok: true });
-  });
+  db.run("DELETE FROM subjects WHERE id=?", [req.params.id], () =>
+    res.json({ ok: true })
+  );
 });
 
-// ===== 記録 =====
+/* ===== ログ記録 ===== */
 app.post("/api/log", (req, res) => {
   const { userId, subjectId, minutes } = req.body;
   const date = new Date().toISOString().slice(0, 10);
@@ -118,46 +121,53 @@ app.post("/api/log", (req, res) => {
     [uuidv4(), userId, subjectId, minutes, date]
   );
 
+  // EXP & レベル計算
   db.get("SELECT * FROM profile WHERE userId=?", [userId], (e, p) => {
     let exp = p.exp + minutes;
     let level = p.level;
-    let need = level * level * 100;
+
+    let need = Math.floor(30 * Math.pow(level, 1.9));
+    let leveledUp = false;
 
     while (exp >= need) {
       exp -= need;
       level++;
-      need = level * level * 100;
+      leveledUp = true;
+      need = Math.floor(30 * Math.pow(level, 1.9));
     }
 
     db.run(
-      "UPDATE profile SET exp=?, level=?, totalMinutes=totalMinutes+? WHERE userId=?",
+      `UPDATE profile
+       SET exp=?, level=?, totalMinutes=totalMinutes+?
+       WHERE userId=?`,
       [exp, level, minutes, userId]
     );
 
     calcStreak(userId);
-    res.json({ ok: true, level, exp });
+
+    res.json({ ok: true, level, exp, leveledUp });
   });
 });
 
-// ===== プロフィール =====
+/* ===== プロフィール ===== */
 app.get("/api/profile/:userId", (req, res) => {
   db.get(
     "SELECT * FROM profile WHERE userId=?",
     [req.params.userId],
-    (e, r) => res.json(r)
+    (e, row) => res.json(row)
   );
 });
 
-// ===== ログ取得 =====
+/* ===== ログ取得 ===== */
 app.get("/api/logs/:userId", (req, res) => {
   db.all(
     "SELECT * FROM logs WHERE userId=?",
     [req.params.userId],
-    (e, r) => res.json(r)
+    (e, rows) => res.json(rows)
   );
 });
 
-// ===== ストリーク計算 =====
+/* ===== ストリーク計算 ===== */
 function calcStreak(userId) {
   db.all(
     "SELECT DISTINCT date FROM logs WHERE userId=? ORDER BY date DESC",
@@ -191,7 +201,7 @@ function calcStreak(userId) {
   );
 }
 
-// ===== 週間目標変更 =====
+/* ===== 週間目標 ===== */
 app.post("/api/weekly-target", (req, res) => {
   const { userId, minutes } = req.body;
   db.run(
@@ -201,27 +211,34 @@ app.post("/api/weekly-target", (req, res) => {
   );
 });
 
-// ===== 疑似AI分析（ルールベース） =====
+/* ===== 疑似AI分析 ===== */
 app.post("/api/ai-analysis", (req, res) => {
   const { userId } = req.body;
 
   db.all(
-    "SELECT subjectId, SUM(minutes) as minutes FROM logs WHERE userId=? GROUP BY subjectId",
+    `
+    SELECT s.name, SUM(l.minutes) as minutes
+    FROM logs l
+    JOIN subjects s ON l.subjectId = s.id
+    WHERE l.userId=?
+    GROUP BY s.id
+    `,
     [userId],
     (e, rows) => {
-      // 科目ごとの学習時間を集計
-      const analysis = rows.map(r => ({
-        subjectId: r.subjectId,
+      const result = rows.map(r => ({
+        subject: r.name,
         minutes: r.minutes,
-        advice: r.minutes < 180 ? "もっと勉強を増やしましょう" : "順調です"
+        advice:
+          r.minutes < 180
+            ? "この科目は勉強時間を増やしましょう"
+            : "順調です"
       }));
-
-      res.json({ result: analysis });
+      res.json({ result });
     }
   );
 });
 
-// ===== 起動 =====
+/* ===== 起動 ===== */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
