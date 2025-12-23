@@ -24,15 +24,26 @@ async function newStart() {
   const nickname = prompt("ニックネームを入力してください");
   if (!nickname) return;
 
-  const res = await fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nickname })
-  });
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nickname })
+    });
 
-  const data = await res.json();
-  userId = data.userId;
+    if (!res.ok) throw new Error("login failed");
+
+    const data = await res.json();
+    userId = data.userId;
+  } catch (e) {
+    //  通信失敗時の保険
+    console.warn("API login failed → local start", e);
+    userId = "local_" + Date.now();
+  }
+
+  //  ここは必ず実行
   localStorage.setItem("userId", userId);
+  localStorage.setItem("nickname", nickname);
 
   await loadAll();
   switchScreen("home");
