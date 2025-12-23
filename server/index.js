@@ -179,109 +179,100 @@ app.post("/api/log", (req, res) => {
   });
 });
 
-/* ===== AI分析（実データ連動・早稲田商学部特化） ===== */
 app.post("/api/ai-analysis", (req, res) => {
   const { userId } = req.body;
   const today = new Date().toISOString().slice(0, 10);
 
-  const subjects = [
-    "歴史",
-    "リーディング",
-    "リスニング",
-    "スピーキング",
-    "国語"
+  const subjects = ["歴史","リーディング","リスニング","スピーキング","国語"];
+
+  const unlockComments = [
+    { days: 60, text: "到達点が異次元です。商学部トップ層と同水準です。" },
+    { days: 30, text: "完全に合格圏内。今後は質の調整フェーズです。" },
+    { days: 14, text: "受験生として非常に完成度が高い状態です。" },
+    { days: 7,  text: "明確に受験生レベルへ移行しています。" },
+    { days: 3,  text: "学習が習慣として定着し始めました。" }
   ];
 
-  const comments = {
-    none: [
-      "今日はまだ未着手ですが、今からでも十分巻き返せます。",
-      "焦る必要はありません。明確に弱点として把握できています。"
-    ],
-    low: [
-      "短時間でも集中できているのが素晴らしいです。",
-      "最低限の接触ができているのは評価できます。"
-    ],
-    mid: [
-      "合格圏に近づく非常に良い学習量です。",
-      "このペースを維持できれば商学部レベルに到達します。"
-    ],
-    high: [
-      "完全に早稲田商学部レベルの学習量です。",
-      "この量を継続できる受験生は多くありません。"
-    ]
-  };
+  db.get(
+    "SELECT * FROM profile WHERE userId=?",
+    [userId],
+    (e, profile) => {
 
-  // 今日の科目別学習時間
-  db.all(
-    `
-    SELECT s.name, SUM(l.minutes) as minutes
-    FROM logs l
-    JOIN subjects s ON l.subjectId = s.id
-    WHERE l.userId=? AND l.date=?
-    GROUP BY s.name
-    `,
-    [userId, today],
-    (e, rows) => {
+      db.all(
+        `
+        SELECT s.name, SUM(l.minutes) as minutes
+        FROM logs l JOIN subjects s ON l.subjectId=s.id
+        WHERE l.userId=? AND l.date=?
+        GROUP BY s.name
+        `,
+        [userId, today],
+        (e, rows) => {
 
-      db.get(
-        "SELECT totalMinutes, streak FROM profile WHERE userId=?",
-        [userId],
-        (e, p) => {
+          db.all(
+            "SELECT * FROM exams WHERE userId=? ORDER BY date DESC",
+            [userId],
+            (e, exams) => {
 
-          const totalHours = (p.totalMinutes / 60).toFixed(1);
-          const progress = Math.min(
-            Math.floor((p.totalMinutes / (3000 * 60)) * 100),
-            100
+              const analysis = subjects.map(sub => {
+                const r = rows.find(x => x.name === sub);
+                const min = r ? r.minutes : 0;
+                const exam = exams.find(x => x.subject === sub);
+
+                let advice = "";
+
+                if (min === 0) {
+                  advice = "今日は未学習。最低20分で接触頻度を保ちましょう。";
+                } else if (min < 40) {
+                  advice = "時間が短め。明日は+20分が理想です。";
+                } else if (min < 90) {
+                  advice = "理想的な学習量です。継続が最優先。";
+                } else {
+                  advice = "学習量は十分。次は精度を意識してください。";
+                }
+
+                if (exam) {
+                  if (exam.score >= 65 && min < 60) {
+                    advice += " 偏差値は高いですが演習量が不足しています。";
+                  }
+                  if (exam.score < 55 && min >= 90) {
+                    advice += " 時間は取れているので、方法改善が鍵です。";
+                  }
+                }
+
+                return {
+                  subject: sub,
+                  minutes: min,
+                  score: exam ? exam.score : null,
+                  priority: min < 60 ? "重点" : "維持",
+                  comment: advice
+                };
+              });
+
+              const unlock =
+                unlockComments.find(u => profile.streak >= u.days)?.text || null;
+
+              const progress = Math.floor(
+                (profile.totalMinutes / (3000 * 60)) * 100
+              );
+
+              res.json({
+                streak: profile.streak,
+                progress,
+                recommendMinutes: 180 + profile.streak * 5,
+                unlockComment: unlock,
+                analysis,
+                overall:
+                  unlock ||
+                  "学習量と継続の両面で順調です。この調子を保ちましょう。"
+              });
+            }
           );
-
-          const analysis = subjects.map(sub => {
-            const row = rows.find(r => r.name === sub);
-            const min = row ? row.minutes : 0;
-
-            let level;
-            if (min === 0) level = "none";
-            else if (min < 40) level = "low";
-            else if (min < 90) level = "mid";
-            else level = "high";
-
-            return {
-              subject: sub,
-              minutes: min,
-              priority: min < 60 ? "重点" : "維持",
-              comment:
-                comments[level][
-                  Math.floor(Math.random() * comments[level].length)
-                ]
-            };
-          });
-
-          let overall;
-          if (progress < 10) {
-            overall =
-              "学習習慣が形成され始めています。今は量より継続が最優先です。";
-          } else if (progress < 40) {
-            overall =
-              "基礎固めとして理想的な段階です。合格に向けて順調です。";
-          } else if (progress < 70) {
-            overall =
-              "早稲田大学商学部の合格圏が現実的に見えてきました。";
-          } else {
-            overall =
-              "完成度が非常に高く、自信を持って過去問演習に入れる段階です。";
-          }
-
-          res.json({
-            streak: p.streak,
-            progress,
-            recommendMinutes: 180 + p.streak * 5,
-            analysis,
-            overall
-          });
         }
       );
     }
   );
 });
+
 
 app.post("/api/exam", (req, res) => {
   const { userId, type, subject, score } = req.body;
