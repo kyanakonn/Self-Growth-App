@@ -283,6 +283,17 @@ app.post("/api/ai-analysis", (req, res) => {
   );
 });
 
+app.post("/api/exam", (req, res) => {
+  const { userId, type, subject, score } = req.body;
+  const date = new Date().toISOString().slice(0, 10);
+
+  db.run(
+    "INSERT INTO exams VALUES (?,?,?,?,?,?)",
+    [crypto.randomUUID(), userId, type, subject, score, date],
+    () => res.json({ ok: true })
+  );
+});
+
 /* ===== ユーザー情報 ===== */
 app.get("/api/user/:userId", (req, res) => {
   db.get(
