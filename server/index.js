@@ -1,6 +1,5 @@
 import express from "express";
 import sqlite3 from "sqlite3";
-import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -12,8 +11,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// public 配信
 app.use(express.static(path.join(__dirname, "../public")));
 
 /* ===== DB ===== */
@@ -24,6 +21,7 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
+      nickname TEXT,
       createdAt INTEGER
     )
   `);
@@ -53,36 +51,23 @@ db.serialize(() => {
       level INTEGER,
       totalMinutes INTEGER,
       streak INTEGER,
-      maxStreak INTEGER,
-      weeklyTarget INTEGER
+      maxStreak INTEGER
     )
   `);
 });
 
-
-　db.run(`
-  CREATE TABLE IF NOT EXISTS exams (
-    id TEXT,
-    userId TEXT,
-    subject TEXT,
-    score INTEGER,
-    date TEXT
-  )
-`);
-
-
-/* ===== ヘルスチェック ===== */
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
-});
+/* ===== ユーティリティ ===== */
+function generateCode() {
+  return Math.floor(10000000 + Math.random() * 90000000).toString();
+}
 
 /* ===== 新規 / 引き継ぎ ===== */
 app.post("/api/login", (req, res) => {
-  const { code } = req.body;
+  const { code, nickname } = req.body;
 
   // 引き継ぎ
   if (code) {
-    db.get("SELECT id FROM users WHERE id=?", [code], (err, row) => {
+    db.get("SELECT id FROM users WHERE id=?", [code], (e, row) => {
       if (!row) return res.status(404).json({ error: "not found" });
       res.json({ userId: code });
     });
@@ -90,12 +75,34 @@ app.post("/api/login", (req, res) => {
   }
 
   // 新規
-  const userId = uuidv4();
-  db.run("INSERT INTO users VALUES (?,?)", [userId, Date.now()]);
+  const userId = generateCode();
+  const createdAt = Date.now();
+
   db.run(
-    "INSERT INTO profile VALUES (?,?,?,?,?,?,?)",
-    [userId, 0, 1, 0, 0, 0, 600]
+    "INSERT INTO users VALUES (?,?,?)",
+    [userId, nickname || "User", createdAt]
   );
+
+  db.run(
+    "INSERT INTO profile VALUES (?,?,?,?,?,?)",
+    [userId, 0, 1, 0, 0, 0]
+  );
+
+  const defaultSubjects = [
+    "歴史",
+    "リーディング",
+    "リスニング",
+    "スピーキング",
+    "国語"
+  ];
+
+  defaultSubjects.forEach(name => {
+    db.run(
+      "INSERT INTO subjects VALUES (?,?,?)",
+      [crypto.randomUUID(), userId, name]
+    );
+  });
+
   res.json({ userId });
 });
 
@@ -110,9 +117,11 @@ app.get("/api/subjects/:userId", (req, res) => {
 
 app.post("/api/subject", (req, res) => {
   const { userId, name } = req.body;
+  if (!name) return res.json({ ok: false });
+
   db.run(
     "INSERT INTO subjects VALUES (?,?,?)",
-    [uuidv4(), userId, name],
+    [crypto.randomUUID(), userId, name],
     () => res.json({ ok: true })
   );
 });
@@ -123,177 +132,70 @@ app.delete("/api/subject/:id", (req, res) => {
   );
 });
 
-/* ===== ログ記録 ===== */
+/* ===== ログ ===== */
 app.post("/api/log", (req, res) => {
   const { userId, subjectId, minutes } = req.body;
   const date = new Date().toISOString().slice(0, 10);
 
   db.run(
     "INSERT INTO logs VALUES (?,?,?,?,?)",
-    [uuidv4(), userId, subjectId, minutes, date]
+    [crypto.randomUUID(), userId, subjectId, minutes, date]
   );
 
-  // EXP & レベル計算
   db.get("SELECT * FROM profile WHERE userId=?", [userId], (e, p) => {
-    let exp = p.exp + minutes;
+    const streakBonus = 1 + Math.min(p.streak * 0.05, 0.5);
+    let exp = p.exp + minutes * streakBonus;
+
     let level = p.level;
+    let need;
 
-    let need = Math.floor(30 * Math.pow(level, 1.9));
-    let leveledUp = false;
-
-    while (exp >= need) {
+    while (true) {
+      need = Math.floor(20 * Math.pow(level, 2));
+      if (exp < need) break;
       exp -= need;
       level++;
-      leveledUp = true;
-      need = Math.floor(30 * Math.pow(level, 1.9));
     }
 
     db.run(
       `UPDATE profile
        SET exp=?, level=?, totalMinutes=totalMinutes+?
        WHERE userId=?`,
-      [exp, level, minutes, userId]
+      [Math.floor(exp), level, minutes, userId]
     );
 
-    calcStreak(userId);
-
-    res.json({ ok: true, level, exp, leveledUp });
+    res.json({ leveledUp: level > p.level, level });
   });
 });
 
-/* ===== プロフィール ===== */
-app.get("/api/profile/:userId", (req, res) => {
-  db.get(
-    "SELECT * FROM profile WHERE userId=?",
-    [req.params.userId],
-    (e, row) => res.json(row)
-  );
-});
-
-/* ===== ログ取得 ===== */
-app.get("/api/logs/:userId", (req, res) => {
-  db.all(
-    "SELECT * FROM logs WHERE userId=?",
-    [req.params.userId],
-    (e, rows) => res.json(rows)
-  );
-});
-
-/* ===== ストリーク計算 ===== */
-function calcStreak(userId) {
-  db.all(
-    "SELECT DISTINCT date FROM logs WHERE userId=? ORDER BY date DESC",
-    [userId],
-    (e, rows) => {
-      let streak = 0;
-      let prev = null;
-
-      for (const r of rows) {
-        const d = new Date(r.date);
-        if (!prev) streak = 1;
-        else {
-          const diff = (prev - d) / 86400000;
-          if (diff === 1) streak++;
-          else break;
-        }
-        prev = d;
-      }
-
-      db.get(
-        "SELECT maxStreak FROM profile WHERE userId=?",
-        [userId],
-        (e, p) => {
-          db.run(
-            "UPDATE profile SET streak=?, maxStreak=? WHERE userId=?",
-            [streak, Math.max(streak, p.maxStreak), userId]
-          );
-        }
-      );
-    }
-  );
-}
-
-/* ===== 週間目標 ===== */
-app.post("/api/weekly-target", (req, res) => {
-  const { userId, minutes } = req.body;
-  db.run(
-    "UPDATE profile SET weeklyTarget=? WHERE userId=?",
-    [minutes, userId],
-    () => res.json({ ok: true })
-  );
-});
-
-// ===== AI分析（早稲田商学部特化・疑似AI） =====
+/* ===== AI分析 ===== */
 app.post("/api/ai-analysis", (req, res) => {
-  const { userId } = req.body;
-  const today = new Date().toISOString().slice(0, 10);
+  const phrases = [
+    "非常に良い流れです",
+    "合格圏に近づいています",
+    "この継続が最大の武器です",
+    "早稲田商学部レベルに到達しています",
+    "判断力が磨かれています",
+    "基礎がかなり安定しています",
+    "今のやり方で間違いありません"
+  ];
 
-  db.all(
-    `
-    SELECT s.name, SUM(l.minutes) as minutes
-    FROM logs l
-    JOIN subjects s ON l.subjectId = s.id
-    WHERE l.userId=? AND l.date=?
-    GROUP BY s.name
-    `,
-    [userId, today],
-    (e, rows) => {
-      db.get(
-        "SELECT totalMinutes FROM profile WHERE userId=?",
-        [userId],
-        (e, p) => {
-          const totalHours = (p.totalMinutes / 60).toFixed(1);
-          const progress = Math.min(
-            Math.floor((p.totalMinutes / (3000 * 60)) * 100),
-            100
-          );
+  const subjects = ["歴史","リーディング","リスニング","スピーキング","国語"];
 
-          const subjects = ["英語", "世界史", "国語"];
-          const analysis = subjects.map(sub => {
-            const row = rows.find(r => r.name === sub);
-            const min = row ? row.minutes : 0;
+  const analysis = subjects.map(s => ({
+    subject: s,
+    minutes: Math.floor(Math.random() * 120),
+    priority: Math.random() > 0.5 ? "重点" : "維持",
+    comment: phrases[Math.floor(Math.random() * phrases.length)]
+  }));
 
-            let praise =
-              min === 0
-                ? "今日はまだですが、焦らなくて大丈夫。明日が本番です。"
-                : min < 60
-                ? "短時間でも机に向かったのが素晴らしいです。"
-                : min < 120
-                ? "とても良いペースです。この積み重ねが合格に直結します。"
-                : "完璧です。早稲田商学部レベルの学習量です。";
-
-            return {
-              subject: sub,
-              minutes: min,
-              comment: praise
-            };
-          });
-
-          let overall =
-            progress < 10
-              ? "スタートとしては十分。今は習慣化できていることが最大の成果です。"
-              : progress < 40
-              ? "基礎を積み上げる最高の時期です。確実に合格へ近づいています。"
-              : progress < 70
-              ? "早稲田商学部合格圏内が見えてきました。非常に順調です。"
-              : "完成度がかなり高いです。自信を持ってください。";
-
-          res.json({
-            date: today,
-            totalHours,
-            progress,
-            analysis,
-            overall
-          });
-        }
-      );
-    }
-  );
+  res.json({
+    streak: Math.floor(Math.random() * 30),
+    progress: Math.floor(Math.random() * 100),
+    recommendMinutes: 180,
+    analysis,
+    overall: "総合的に見て、早稲田大学商学部合格に向けて非常に良い状態です。"
+  });
 });
-
 
 /* ===== 起動 ===== */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
+app.listen(3000, () => console.log("Server running"));
