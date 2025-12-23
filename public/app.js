@@ -13,12 +13,12 @@ let chart;
 ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
   if (userId) {
+    // ★ 先に画面を切り替える（重要）
+    switchScreen("home");
     try {
       await loadAll();
-      switchScreen("home");
     } catch (e) {
       console.warn("startup load failed", e);
-      switchScreen("start");
     }
   } else {
     switchScreen("start");
@@ -31,6 +31,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function newStart() {
   const nickname = prompt("ニックネームを入力してください");
   if (!nickname) return;
+
+  // ★ 入力直後に最新ニックネームを確定
+  localStorage.setItem("nickname", nickname);
+  userInfo = { nickname };
 
   try {
     const res = await fetch("/api/login", {
@@ -48,15 +52,15 @@ async function newStart() {
   }
 
   localStorage.setItem("userId", userId);
-  localStorage.setItem("nickname", nickname);
+
+  // ★ 必ず画面遷移
+  switchScreen("home");
 
   try {
     await loadAll();
   } catch (e) {
     console.warn("loadAll failed but continue", e);
   }
-
-  switchScreen("home");
 }
 
 async function login() {
@@ -76,8 +80,8 @@ async function login() {
     userId = data.userId;
     localStorage.setItem("userId", userId);
 
-    await loadAll();
     switchScreen("home");
+    await loadAll();
   } catch (e) {
     alert("ログインに失敗しました");
     console.error(e);
@@ -97,7 +101,7 @@ async function loadAll() {
     console.warn("API load failed → fallback", e);
 
     // フォールバック（既存機能保持）
-    subjects = subjects.length ? subjects : ["英語", "国語", "世界史"];
+    subjects = subjects || [];
     logs = logs || [];
     profile = profile || {
       level: 1,
@@ -106,7 +110,9 @@ async function loadAll() {
       streak: 0,
       maxStreak: 0
     };
-    userInfo = userInfo || {
+
+    // ★ 常に最新 nickname を使用
+    userInfo = {
       nickname: localStorage.getItem("nickname") || "未設定"
     };
   }
@@ -150,9 +156,6 @@ function goHome() {
 ===================== */
 function renderAI(d) {
   if (!d) return;
-  if (d.unlockComment) {
-    aiOverall.textContent = "🔓 " + d.unlockComment;
-  } else {
-    aiOverall.textContent = d.overall;
-  }
+  aiOverall.textContent =
+    d.unlockComment ? "🔓 " + d.unlockComment : d.overall;
 }
