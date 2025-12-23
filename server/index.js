@@ -197,5 +197,15 @@ app.post("/api/ai-analysis", (req, res) => {
   });
 });
 
+/* ===== ユーザー情報 ===== */
+app.get("/api/user/:userId", (req, res) => {
+  db.get(
+    "SELECT nickname FROM users WHERE id=?",
+    [req.params.userId],
+    (e, row) => res.json(row)
+  );
+});
+
+
 /* ===== 起動 ===== */
 app.listen(3000, () => console.log("Server running"));
