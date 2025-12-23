@@ -43,6 +43,8 @@ Lv <span id="level"></span>
 <button onclick="addSubject()">追加</button>
 </div>
 
+<button onclick="openTimer()">⏱ タイマー</button>
+  
 <div class="card">
 <h3>📊 勉強グラフ</h3>
 <div style="display:flex;gap:6px">
@@ -53,7 +55,7 @@ Lv <span id="level"></span>
 <canvas id="chart"></canvas>
 </div>
 
-<button onclick="openTimer()">⏱ タイマー</button>
+<button onclick="openAI()">🤖 模擬AI判定</button>
 </div>
 
 <!-- ===== プロフィール ===== -->
@@ -81,9 +83,6 @@ Lv <span id="level"></span>
 <button id="saveBtn" class="hidden" onclick="saveTimer()">保存</button>
 </div>
 </div>
-
-<!-- ホーム画面内に追加 -->
-<button onclick="openAI()">🤖 模擬AI判定</button>
   
 <div id="ai" class="screen">
 <button onclick="goHome()">← 戻る</button>
