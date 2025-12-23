@@ -107,8 +107,11 @@ function goHome() {
   switchScreen("home");
 }
 
-if (d.unlockComment) {
-  aiOverall.textContent = "🔓 " + d.unlockComment;
-} else {
-  aiOverall.textContent = d.overall;
+function renderAI(d) {
+  if (d.unlockComment) {
+    aiOverall.textContent = "🔓 " + d.unlockComment;
+  } else {
+    aiOverall.textContent = d.overall;
+  }
 }
+
