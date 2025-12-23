@@ -56,6 +56,18 @@ db.serialize(() => {
   `);
 });
 
+　db.run(`
+  CREATE TABLE IF NOT EXISTS exams (
+    id TEXT,
+    userId TEXT,
+    type TEXT,
+    subject TEXT,
+    score INTEGER,
+    date TEXT
+  )
+`);
+
+
 /* ===== ユーティリティ ===== */
 function generateCode() {
   return Math.floor(10000000 + Math.random() * 90000000).toString();
