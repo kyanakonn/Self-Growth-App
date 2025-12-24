@@ -1,3 +1,17 @@
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const saveBtn = document.getElementById("saveBtn");
+const timer = document.getElementById("timer");
+const subject = document.getElementById("subject");
+const manualSubject = document.getElementById("manualSubject");
+const weeklyGoalInput = document.getElementById("weeklyGoalInput");
+const levelEl = document.getElementById("level");
+const exp = document.getElementById("exp");
+const expInfo = document.getElementById("expInfo");
+const settings = document.getElementById("settings");
+const profile = document.getElementById("profile");
+const profileText = document.getElementById("profileText");
+
 let code, data;
 let startTime, timerInterval;
 
@@ -30,8 +44,13 @@ async function fetchData() {
 
 function loadData(d) {
   data = d;
+
+  settings.style.display = "none";
+  profile.style.display = "none";
+
   document.getElementById("start").hidden = true;
   document.getElementById("app").hidden = false;
+
   checkWeeklyReset();
   updateUI();
 }
@@ -173,20 +192,6 @@ function closeProfile() {
   profile.style.display = "none";
 }
 
-function loadData(d) {
-  data = d;
-
-  // 🔒 念のためすべて閉じる
-  settings.style.display = "none";
-  profile.style.display = "none";
-
-  document.getElementById("start").hidden = true;
-  document.getElementById("app").hidden = false;
-
-  updateUI();
-}
-
-
 /* ---------- 共通 ---------- */
 
 function toggle(running) {
@@ -259,12 +264,13 @@ function updateWeeklyInfo() {
     <h3>週目標 ${data.weeklyGoal}時間</h3>
     <p>残り ${h}時間 ${m}分</p>
   `;
- 
-if (remain <= 0 && !data.weeklyCleared) {
-  data.weeklyCleared = true;
-  showWeeklyClear();
-  saveServer();
-}
+
+  if (remain <= 0 && !data.weeklyCleared) {
+    data.weeklyCleared = true;
+    showWeeklyClear();
+    saveServer();
+  }
+} // ← ★ これが抜けていた
 
 function checkWeeklyReset() {
   if (data.weeklyGoalEnd && new Date() > new Date(data.weeklyGoalEnd)) {
