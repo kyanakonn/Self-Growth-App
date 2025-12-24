@@ -281,16 +281,14 @@ async function openAI() {
     body: JSON.stringify({ userId })
   });
 
-  const data = await res.json();
+  const d = await res.json();
 
-  aiOverall.innerHTML = data.comments.map(c => `• ${c}`).join("<br>");
-
-  aiSubjects.innerHTML = "";
-  data.subjects.forEach(s => {
-    aiSubjects.innerHTML += `
-      <div class="card">
-        <b>${s.name}</b>：${s.minutes || 0} 分
-      </div>
-    `;
-  });
+  aiOverall.innerHTML = `
+    <h3>🎯 合格確率：${d.probability}%（${d.rank}ランク）</h3>
+    <p>${d.comment}</p>
+    <hr>
+    <p>🔥 連続記録：${d.streak} 日</p>
+    <p>📚 総学習：${d.totalHours} 時間 / 3000</p>
+    <p>📈 直近7日平均：${d.avg7} 分/日</p>
+  `;
 }
