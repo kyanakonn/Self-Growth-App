@@ -294,6 +294,16 @@ app.get("/api/user/:userId", (req, res) => {
   );
 });
 
+/* ===== ログ取得 ===== */
+app.get("/api/logs/:userId", (req, res) => {
+  db.all(
+    "SELECT * FROM logs WHERE userId=?",
+    [req.params.userId],
+    (e, rows) => res.json(rows || [])
+  );
+});
+
+
 
 /* ===== 起動 ===== */
 app.listen(3000, () => console.log("Server running"));
