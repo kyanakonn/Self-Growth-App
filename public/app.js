@@ -87,3 +87,51 @@ function renderChart(){
     data:{labels:days,datasets:[{label:"合計",data}]}
   });
 }
+
+function goProfile() {
+  nicknameInput.value = profile.nickname;
+  pStreak.textContent = profile.streak;
+  pMaxStreak.textContent = profile.maxStreak;
+  pTime.textContent = (profile.totalMinutes / 60).toFixed(1);
+  switchScreen("profile");
+}
+
+async function saveNickname() {
+  await fetch("/api/nickname", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      nickname: nicknameInput.value || "名前なし"
+    })
+  });
+  await loadAll();
+}
+
+async function ensureDefaultSubjects() {
+  const base = ["リスニング","リーディング","スピーキング","世界史","国語"];
+  const names = subjects.map(s => s.name);
+
+  for (const name of base) {
+    if (!names.includes(name)) {
+      await fetch("/api/subject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, name })
+      });
+    }
+  }
+}
+
+async function loadAll() {
+  subjects = await fetch(`/api/subjects/${userId}`).then(r=>r.json());
+  await ensureDefaultSubjects();
+  subjects = await fetch(`/api/subjects/${userId}`).then(r=>r.json());
+
+  logs = await fetch(`/api/logs/${userId}`).then(r=>r.json());
+  profile = await fetch(`/api/profile/${userId}`).then(r=>r.json());
+
+  renderSubjects();
+  renderManage();
+  renderChart();
+}
