@@ -1,143 +1,119 @@
-let userId = localStorage.getItem("userId");
-let subjects=[], logs=[], profile=null;
-let chart, chartMode="week";
+let code, data;
+let startTime, timerInterval;
 
-/* 起動 */
-document.addEventListener("DOMContentLoaded", init);
+const fmt = s =>
+  new Date(s * 1000).toISOString().substr(11, 8);
 
-async function init(){
-  bindButtons();
-  if(userId){switchScreen("home"); await loadAll();}
-  else switchScreen("start");
+async function newStart() {
+  const r = await fetch("/api/new", { method: "POST" });
+  const j = await r.json();
+  code = j.code;
+  alert("引き継ぎコード：" + code);
+  loadData(await fetchData());
 }
 
-function bindButtons(){
-  document.getElementById("profileBtn")?.addEventListener("click", goProfile);
-  document.getElementById("timerBtn")?.addEventListener("click", openTimer);
+async function load() {
+  code = document.getElementById("codeInput").value;
+  loadData(await fetchData());
 }
 
-/* 新規 */
-async function newStart(){
-  const r = await fetch("/api/login",{method:"POST"});
-  userId=(await r.json()).userId;
-  localStorage.setItem("userId",userId);
-  switchScreen("home"); await loadAll();
-}
-
-/* 読込 */
-async function loadAll(){
-  subjects=await fetch(`/api/subjects/${userId}`).then(r=>r.json());
-  logs=await fetch(`/api/logs/${userId}`).then(r=>r.json());
-  profile=await fetch(`/api/profile/${userId}`).then(r=>r.json());
-  renderSubjects(); renderManage(); renderChart();
-}
-
-/* 画面 */
-function switchScreen(id){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-function goProfile(){switchScreen("profile");}
-
-/* 科目描画 */
-function renderSubjects(){
-  manualSubject.innerHTML="<option value=''>選択</option>";
-  timerSubject.innerHTML="<option value=''>選択</option>";
-  subjects.forEach(s=>{
-    manualSubject.add(new Option(s.name,s.id));
-    timerSubject.add(new Option(s.name,s.id));
-  });
-}
-
-/* 管理 */
-function renderManage(){
-  subjectManage.innerHTML="";
-  subjects.forEach(s=>{
-    subjectManage.innerHTML+=`
-      <div>${s.name}
-      ${s.isDefault? "🔒":
-      `<button onclick="deleteSubject('${s.id}')">削除</button>`}
-      </div>`;
-  });
-}
-
-/* 保存 */
-async function manualSave(){
-  if(!manualSubject.value) return alert("科目を選択してください");
-  const min=Number(h.value)*60+Number(m.value);
-  if(min<=0) return;
-  await fetch("/api/log",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({userId,subjectId:manualSubject.value,minutes:min})});
-  await loadAll();
-}
-
-/* タイマー */
-function openTimer(){switchScreen("timerFull");}
-
-/* グラフ（週） */
-function renderChart(){
-  const days=[...Array(7)].map((_,i)=>{
-    const d=new Date(); d.setDate(d.getDate()-6+i);
-    return d.toISOString().slice(0,10);
-  });
-  const data=days.map(d=>logs.filter(l=>l.date===d).reduce((a,b)=>a+b.minutes,0));
-  if(chart)chart.destroy();
-  chart=new Chart(chartEl,{
-    type:"bar",
-    data:{labels:days,datasets:[{label:"合計",data}]}
-  });
-}
-
-function goProfile() {
-  nicknameInput.value = profile.nickname;
-  pStreak.textContent = profile.streak;
-  pMaxStreak.textContent = profile.maxStreak;
-  pTime.textContent = (profile.totalMinutes / 60).toFixed(1);
-  switchScreen("profile");
-}
-
-async function saveNickname() {
-  await fetch("/api/nickname", {
+async function fetchData() {
+  const r = await fetch("/api/load", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId,
-      nickname: nicknameInput.value || "名前なし"
-    })
+    body: JSON.stringify({ code })
   });
-  await loadAll();
+  return r.json();
 }
 
-async function ensureDefaultSubjects() {
-  const base = ["リスニング","リーディング","スピーキング","世界史","国語"];
-  const names = subjects.map(s => s.name);
+function loadData(d) {
+  data = d;
+  document.getElementById("start").hidden = true;
+  document.getElementById("app").hidden = false;
+  updateUI();
+}
 
-  for (const name of base) {
-    if (!names.includes(name)) {
-      await fetch("/api/subject", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, name })
-      });
-    }
+function updateUI() {
+  document.getElementById("subject").innerHTML =
+    data.subjects.map(s => `<option>${s}</option>`).join("");
+  updateExp();
+  drawChart();
+}
+
+function start() {
+  startTime = Date.now();
+  timerInterval = setInterval(() => {
+    document.getElementById("timer").innerText =
+      fmt((Date.now() - startTime) / 1000);
+  }, 1000);
+  toggle(true);
+}
+
+function stop() {
+  clearInterval(timerInterval);
+  toggle(false);
+}
+
+function save() {
+  const sec = Math.floor((Date.now() - startTime) / 1000);
+  if (sec >= 60) {
+    data.logs.push({
+      subject: subject.value,
+      sec,
+      date: new Date().toISOString().slice(0, 10)
+    });
+    gainExp(sec / 60);
   }
+  reset();
 }
 
-async function loadAll() {
-  subjects = await fetch(`/api/subjects/${userId}`).then(r=>r.json());
-  await ensureDefaultSubjects();
-  subjects = await fetch(`/api/subjects/${userId}`).then(r=>r.json());
-
-  logs = await fetch(`/api/logs/${userId}`).then(r=>r.json());
-  profile = await fetch(`/api/profile/${userId}`).then(r=>r.json());
-
-  renderSubjects();
-  renderManage();
-  renderChart();
+function gainExp(min) {
+  data.exp += min * 2;
+  updateExp();
 }
 
-function bindButtons() {
-  document.getElementById("profileBtn")?.addEventListener("click", goProfile);
-  document.getElementById("timerBtn")?.addEventListener("click", openTimer);
-  document.getElementById("profileBackBtn")?.addEventListener("click", goHome);
+function updateExp() {
+  const lvl = Math.floor(Math.sqrt(data.exp / 30));
+  document.getElementById("level").innerText = `Lv.${lvl}`;
+  document.getElementById("exp").style.width =
+    ((data.exp % 30) / 30) * 100 + "%";
+}
+
+function drawChart() {
+  const ctx = document.getElementById("chart");
+  const days = {};
+  data.logs.forEach(l => {
+    days[l.date] = (days[l.date] || 0) + l.sec / 3600;
+  });
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: Object.keys(days),
+      datasets: [{ data: Object.values(days) }]
+    }
+  });
+}
+
+function aiEval() {
+  alert("判定：B\n合格確率：72%\n継続は力なり！");
+}
+
+function toggle(running) {
+  startBtn.hidden = running;
+  stopBtn.hidden = !running;
+  saveBtn.hidden = running;
+}
+
+function reset() {
+  document.getElementById("timer").innerText = "00:00:00";
+  toggle(false);
+  saveServer();
+}
+
+function saveServer() {
+  fetch("/api/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, data })
+  });
 }
