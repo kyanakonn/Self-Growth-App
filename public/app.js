@@ -101,15 +101,30 @@ function addLog(subject, sec) {
 }
 
 /* ---------- EXP ---------- */
-
 function gainExp(min) {
+  const beforeLevel = calcLevel(data.exp);
   data.exp += min * 2;
+  const afterLevel = calcLevel(data.exp);
+
+  updateExp();
+
+  if (afterLevel > beforeLevel) {
+    showLevelUp(afterLevel - beforeLevel);
+  }
 }
 
 function updateExp() {
-  const lvl = Math.floor(Math.sqrt(data.exp / 30));
-  level.innerText = `Lv.${lvl}`;
-  exp.style.width = ((data.exp % 30) / 30) * 100 + "%";
+  const level = calcLevel(data.exp);
+  const next = nextLevelExp(level);
+  const prev = nextLevelExp(level - 1) || 0;
+
+  const percent = ((data.exp - prev) / (next - prev)) * 100;
+
+  levelEl.innerText = `Lv.${level}`;
+  exp.style.width = Math.min(100, percent) + "%";
+
+  expInfo.innerText =
+    `EXP ${Math.floor(data.exp)} / ${next}（次のLvまで ${Math.max(0, next - data.exp)}）`;
 }
 
 /* ---------- グラフ ---------- */
@@ -244,13 +259,55 @@ function updateWeeklyInfo() {
     <h3>週目標 ${data.weeklyGoal}時間</h3>
     <p>残り ${h}時間 ${m}分</p>
   `;
+ 
+if (remain <= 0 && !data.weeklyCleared) {
+  data.weeklyCleared = true;
+  showWeeklyClear();
+  saveServer();
 }
 
 function checkWeeklyReset() {
   if (data.weeklyGoalEnd && new Date() > new Date(data.weeklyGoalEnd)) {
     data.weeklyGoalLocked = false;
     data.weeklyGoalEnd = null;
+    data.weeklyCleared = false; // ← 追加
     saveServer();
   }
+}
+
+function calcLevel(exp) {
+  return Math.floor(Math.sqrt(exp / 30));
+}
+
+function nextLevelExp(level) {
+  return (level + 1) ** 2 * 30;
+}
+
+function showLevelUp(count) {
+  let i = 0;
+  const overlay = document.getElementById("levelUp");
+
+  const loop = () => {
+    if (i >= count) return;
+    overlay.style.display = "flex";
+    setTimeout(() => {
+      overlay.style.display = "none";
+      i++;
+      setTimeout(loop, 300);
+    }, 800);
+  };
+
+  loop();
+}
+
+function showWeeklyClear() {
+  const overlay = document.getElementById("weeklyClear");
+  overlay.style.display = "flex";
+  document.body.classList.add("flash");
+
+  setTimeout(() => {
+    overlay.style.display = "none";
+    document.body.classList.remove("flash");
+  }, 1200);
 }
 
