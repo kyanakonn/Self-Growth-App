@@ -65,7 +65,7 @@ const DEFAULT_SUBJECTS = [
   "国語"
 ];
 
-/* ===== 新規ユーザー ===== */
+/* ===== ログイン ===== */
 app.post("/api/login", (req, res) => {
   const userId = crypto.randomUUID();
 
@@ -84,7 +84,7 @@ app.post("/api/login", (req, res) => {
   res.json({ userId });
 });
 
-/* ===== 科目取得（全UI共通） ===== */
+/* ===== 科目取得 ===== */
 app.get("/api/subjects/:userId", (req, res) => {
   db.all(
     "SELECT * FROM subjects WHERE userId=?",
@@ -93,39 +93,7 @@ app.get("/api/subjects/:userId", (req, res) => {
   );
 });
 
-/* ===== 科目追加 ===== */
-app.post("/api/subjects", (req, res) => {
-  const { userId, name } = req.body;
-
-  db.run(
-    "INSERT INTO subjects VALUES (?,?,?,0)",
-    [crypto.randomUUID(), userId, name]
-  );
-
-  res.json({ ok: true });
-});
-
-/* ===== 科目削除（初期科目不可） ===== */
-app.delete("/api/subjects/:id", (req, res) => {
-  const id = req.params.id;
-
-  db.get(
-    "SELECT isDefault FROM subjects WHERE id=?",
-    [id],
-    (_, row) => {
-      if (!row || row.isDefault) {
-        return res.status(403).json({ error: "default subject" });
-      }
-
-      db.run("DELETE FROM logs WHERE subjectId=?", [id]);
-      db.run("DELETE FROM subjects WHERE id=?", [id]);
-
-      res.json({ ok: true });
-    }
-  );
-});
-
-/* ===== ログ記録 ===== */
+/* ===== 記録 ===== */
 app.post("/api/log", (req, res) => {
   const { userId, subjectId, minutes } = req.body;
   const today = todayJP();
@@ -141,52 +109,51 @@ app.post("/api/log", (req, res) => {
     let streak = p.streak;
 
     if (p.lastRecordDate === today) {
-    } else if (p.lastRecordDate === today) {
+      // 変化なし
+    } else if (p.lastRecordDate === todayJP(-1)) {
       streak++;
     } else {
       streak = 1;
     }
 
     const maxStreak = Math.max(streak, p.maxStreak);
-    const totalMinutes = p.totalMinutes + minutes;
 
     db.run(
       `
       UPDATE profile
-      SET totalMinutes=?, streak=?, maxStreak=?, lastRecordDate=?
+      SET totalMinutes=totalMinutes+?,
+          streak=?, maxStreak=?, lastRecordDate=?
       WHERE userId=?
       `,
-      [totalMinutes, streak, maxStreak, today, userId]
+      [minutes, streak, maxStreak, today, userId]
     );
 
     res.json({ ok: true });
   });
 });
 
-/* ===== 🧠 模擬AI評価 ===== */
+/* ===== 模擬AI評価 ===== */
 app.post("/api/ai-analysis", (req, res) => {
   const { userId } = req.body;
 
   db.get("SELECT * FROM profile WHERE userId=?", [userId], (_, p) => {
-    const seed = todayJP() + Math.floor(p.totalMinutes / 30);
-
     const phrases = [
-      "このペースなら確実に伸びます。",
-      "積み上げが合格ラインに近づいています。",
-      "今は我慢期。継続が最大の武器です。",
-      "受験生としてかなり良い状態です。",
-      "今日の積み重ねは裏切りません。"
+      "今は基礎構築期。継続が最大の武器。",
+      "確実に前進しています。",
+      "合格者の平均に近づいています。",
+      "この習慣は強いです。",
+      "今の努力は必ず回収できます。"
     ];
 
-    const phrase = phrases[
+    const seed = todayJP() + Math.floor(p.totalMinutes / 30);
+    const index =
       seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0) %
-        phrases.length
-    ];
+      phrases.length;
 
     res.json({
       streak: p.streak,
       totalMinutes: p.totalMinutes,
-      phrase
+      phrase: phrases[index]
     });
   });
 });
