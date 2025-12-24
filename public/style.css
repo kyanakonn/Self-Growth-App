@@ -72,17 +72,8 @@ button{
   pointer-events: auto;
 }
 
-/* ===== 追加：画面切替のクリック制御（最終修正） ===== */
 
-/* すべての screen は操作不可にする */
-.screen{
-  pointer-events: none;
-}
 
-/* 表示中（active）の画面だけ操作可能 */
-.screen.active{
-  pointer-events: auto;
-}
 
 /* ===== 最終修正：active画面だけを最前面にする ===== */
 
