@@ -1,17 +1,100 @@
+/* ===== 全体 ===== */
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ===== レイアウト ===== */
+header {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+main {
+  padding: 16px;
+}
+
+h1, h2, h3 {
+  margin: 12px 0;
+}
+
+/* ===== ボタン ===== */
+button {
+  background: #111;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 14px;
+  width: 100%;
+  margin-top: 8px;
+  font-size: 16px;
+}
+
+button:active {
+  background: #222;
+}
+
+/* ===== 入力 ===== */
+input, select {
+  background: #111;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* ===== EXP ===== */
+.exp-bar {
+  flex: 1;
+  height: 10px;
+  background: #222;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+#exp {
+  height: 100%;
+  background: linear-gradient(90deg, #0f0, #8f8);
+  width: 0%;
+  transition: width 0.4s;
+}
+
+/* ===== タイマー ===== */
+#timer {
+  text-align: center;
+  font-size: 48px;
+  margin: 20px 0;
+}
+
+/* ===== カード ===== */
+.card {
+  background: #111;
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+/* ===== モーダル ===== */
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.7);
-  display: none;            /* ← 重要 */
+  background: rgba(0,0,0,0.8);
+  display: none;
   justify-content: center;
   align-items: center;
-  z-index: 1000;            /* ← 重要 */
+  z-index: 1000;
 }
 
 .modal-content {
-  background: #222;
+  background: #111;
+  border-radius: 14px;
   padding: 20px;
-  border-radius: 12px;
   width: 90%;
-  max-width: 400px;
+  max-width: 420px;
 }
