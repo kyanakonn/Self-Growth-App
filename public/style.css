@@ -170,6 +170,3 @@ input, select {
   transform: scaleY(1.4);
   transition: transform 0.3s;
 }
-
-exp.classList.add("exp-animate");
-setTimeout(() => exp.classList.remove("exp-animate"), 300);
