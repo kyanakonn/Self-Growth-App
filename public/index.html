@@ -20,20 +20,55 @@
   <header>
     <span id="level"></span>
     <div class="exp-bar"><div id="exp"></div></div>
-    <button onclick="openProfile()">⚙️</button>
+    <button onclick="openSettings()">⚙️</button>
   </header>
 
   <main id="home">
     <h2 id="timer">00:00:00</h2>
+
     <select id="subject"></select>
+
     <button id="startBtn" onclick="start()">START</button>
     <button id="stopBtn" onclick="stop()" hidden>STOP</button>
     <button id="saveBtn" onclick="save()" hidden>保存</button>
+
+    <hr>
+
+    <h3>手動記録</h3>
+    <select id="manualSubject"></select>
+    <input type="number" id="manualHour" placeholder="時間" min="0">
+    <input type="number" id="manualMin" placeholder="分" min="0" max="59">
+    <button onclick="manualSave()">手動保存</button>
   </main>
 
   <canvas id="chart"></canvas>
 
   <button onclick="aiEval()">AI評価</button>
+</div>
+
+<!-- 設定モーダル -->
+<div id="settings" class="modal" hidden>
+  <div class="modal-content">
+    <h2>設定</h2>
+
+    <label>週の目標時間（時間）</label>
+    <input type="number" id="weeklyGoalInput" min="1">
+
+    <button onclick="saveSettings()">保存</button>
+    <button onclick="closeSettings()">閉じる</button>
+
+    <hr>
+    <button onclick="openProfile()">プロフィールを見る</button>
+  </div>
+</div>
+
+<!-- プロフィール -->
+<div id="profile" class="modal" hidden>
+  <div class="modal-content">
+    <h2>プロフィール</h2>
+    <p id="profileText"></p>
+    <button onclick="closeProfile()">閉じる</button>
+  </div>
 </div>
 
 <script src="app.js"></script>
