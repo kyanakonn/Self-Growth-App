@@ -84,3 +84,21 @@ button{
   pointer-events: auto;
 }
 
+/* ===== 最終修正：active画面だけを最前面にする ===== */
+
+/* すべての screen を背面に */
+.screen{
+  position: relative;
+  z-index: 0;
+}
+
+/* 表示中の画面だけ最前面 */
+.screen.active{
+  z-index: 10;
+}
+
+/* timer は active のときだけ最前面 */
+.screen.active.timer-full{
+  z-index: 20;
+}
+
