@@ -4,83 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Self Growth App</title>
-<link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
 
-<div id="start" class="screen active">
-<h1>📚 Self Growth App</h1>
-<button onclick="newStart()">新規スタート</button>
-<input id="codeInput" placeholder="引き継ぎコード">
-<button onclick="login()">引き継ぎ</button>
-</div>
+<nav>
+  <button id="homeBtn">ホーム</button>
+  <button id="profileBtn">プロフィール</button>
+  <button id="aiBtn">模擬AI評価</button>
+</nav>
 
-<div id="home" class="screen">
-<button onclick="goProfile()">👤 プロフィール</button>
+<select id="subjectSelect"></select>
 
-<div class="card">
-Lv <span id="level"></span>
-<div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
-</div>
-
-<div class="card">
-<h3>✍️ 手動記録</h3>
-<select id="manualSubject"></select>
-<input id="h" type="number" placeholder="時間">
-<input id="m" type="number" placeholder="分">
-<button onclick="manualSave()">保存</button>
-</div>
-
-<div class="card">
-<h3>科目追加</h3>
-<input id="newSub">
-<button onclick="addSubject()">追加</button>
-</div>
-
-<div id="subjectManage"></div>
-
-<button onclick="openTimer()">⏱ タイマー</button>
-
-<div class="card">
-<h3>📊 勉強グラフ</h3>
-<canvas id="chartEl"></canvas>
-</div>
-
-<button onclick="openAI()">🤖 模擬AI判定</button>
-</div>
-
-<div id="profile" class="screen">
-<button onclick="goHome()">← 戻る</button>
-<div class="card">
-<p>レベル: <span id="pLevel"></span></p>
-<p>EXP: <span id="pExp"></span></p>
-<p>合計時間: <span id="pTime"></span> 時間</p>
-<p>コード: <span id="pCode"></span></p>
-<p>ニックネーム: <span id="pNickname"></span></p>
-<p>連続日数: <span id="pStreak"></span></p>
-<p>最大連続: <span id="pMaxStreak"></span></p>
-</div>
-</div>
-
-<div id="timerFull" class="screen timer-full">
-<select id="timerSubject"></select>
-<div id="timerText">0:00</div>
-<div class="timer-btns">
-<button id="startBtn" onclick="startTimer()">START</button>
-<button id="stopBtn" class="hidden" onclick="stopTimer()">STOP</button>
-<button id="saveBtn" class="hidden" onclick="saveTimer()">保存</button>
-</div>
-</div>
-
-<div id="ai" class="screen">
-<button onclick="goHome()">← 戻る</button>
-<div class="card">
-<h2>🤖 AI学習評価（早稲田商）</h2>
-<p id="aiOverall"></p>
-</div>
-<div id="aiSubjects"></div>
+<div id="screen-home" class="screen active"></div>
+<div id="screen-profile" class="screen"></div>
+<div id="screen-ai" class="screen">
+  <div id="aiOverall"></div>
 </div>
 
 <script src="app.js"></script>
