@@ -171,15 +171,17 @@ function updateExp() {
 }
 
 function animateExpDiff(diffExp) {
-  const step = diffExp / 30; // アニメーション分割
+  const step = diffExp / 30;
   let current = 0;
 
   const beforeLevel = calcLevel(data.exp);
 
+  exp.classList.add("exp-animate");
+  setTimeout(() => exp.classList.remove("exp-animate"), 300);
+
   const interval = setInterval(() => {
     data.exp += step;
     current += step;
-
     updateExp();
 
     if (
