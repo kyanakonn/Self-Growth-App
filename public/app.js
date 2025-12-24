@@ -284,11 +284,15 @@ function nextLevelExp(level) {
 }
 
 function showLevelUp(count) {
-  let i = 0;
   const overlay = document.getElementById("levelUp");
+  overlay.style.pointerEvents = "auto";
 
+  let i = 0;
   const loop = () => {
-    if (i >= count) return;
+    if (i >= count) {
+      overlay.style.pointerEvents = "none";
+      return;
+    }
     overlay.style.display = "flex";
     setTimeout(() => {
       overlay.style.display = "none";
@@ -296,18 +300,19 @@ function showLevelUp(count) {
       setTimeout(loop, 300);
     }, 800);
   };
-
   loop();
 }
 
 function showWeeklyClear() {
   const overlay = document.getElementById("weeklyClear");
+  overlay.style.pointerEvents = "auto";
   overlay.style.display = "flex";
+
   document.body.classList.add("flash");
 
   setTimeout(() => {
     overlay.style.display = "none";
+    overlay.style.pointerEvents = "none";
     document.body.classList.remove("flash");
   }, 1200);
 }
-
