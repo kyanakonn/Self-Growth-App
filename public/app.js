@@ -1,4 +1,13 @@
 let chart = null;
+const logsModal = document.getElementById("logsModal");
+const logsList = document.getElementById("logsList");
+const editModal = document.getElementById("editModal");
+
+const editSubject = document.getElementById("editSubject");
+const editHour = document.getElementById("editHour");
+const editMin = document.getElementById("editMin");
+
+let editingIndex = null;
 
 const manualHour = document.getElementById("manualHour");
 const manualMin = document.getElementById("manualMin");
@@ -391,4 +400,85 @@ function aggregateLogs(type) {
   });
 
   return result;
+}
+
+function openLogs() {
+  logsModal.style.display = "flex";
+  renderLogs();
+}
+
+function closeLogs() {
+  logsModal.style.display = "none";
+}
+
+function renderLogs() {
+  logsList.innerHTML = "";
+
+  data.logs
+    .slice()
+    .reverse()
+    .forEach((l, i) => {
+      const h = Math.floor(l.sec / 3600);
+      const m = Math.floor((l.sec % 3600) / 60);
+
+      const div = document.createElement("div");
+      div.className = "log-item";
+      div.innerHTML = `
+        <strong>${l.subject}</strong>
+        <span>${h}時間 ${m}分</span>
+        <small>${l.date}</small>
+      `;
+      div.onclick = () => openEdit(data.logs.length - 1 - i);
+
+      logsList.appendChild(div);
+    });
+}
+
+function openEdit(index) {
+  editingIndex = index;
+  const log = data.logs[index];
+
+  editSubject.innerHTML =
+    data.subjects.map(s => `<option>${s}</option>`).join("");
+  editSubject.value = log.subject;
+
+  editHour.value = Math.floor(log.sec / 3600);
+  editMin.value = Math.floor((log.sec % 3600) / 60);
+
+  editModal.style.display = "flex";
+}
+
+function saveEdit() {
+  if (editingIndex === null) return;
+
+  const h = +editHour.value || 0;
+  const m = +editMin.value || 0;
+  const sec = h * 3600 + m * 60;
+
+  if (sec < 60) return alert("1分以上にしてください");
+
+  data.logs[editingIndex].subject = editSubject.value;
+  data.logs[editingIndex].sec = sec;
+
+  saveServer();
+  updateUI();
+  renderLogs();
+  closeEdit();
+}
+
+function deleteLog() {
+  if (editingIndex === null) return;
+  if (!confirm("この記録を削除しますか？")) return;
+
+  data.logs.splice(editingIndex, 1);
+
+  saveServer();
+  updateUI();
+  renderLogs();
+  closeEdit();
+}
+
+function closeEdit() {
+  editModal.style.display = "none";
+  editingIndex = null;
 }
