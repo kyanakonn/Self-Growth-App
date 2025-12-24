@@ -7,94 +7,34 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
 
-<div id="start" class="screen active">
-  <h1>📚 Self Growth App</h1>
+<div id="start">
+  <h1>Self Growth App</h1>
   <button onclick="newStart()">新規スタート</button>
+  <input id="codeInput" placeholder="引き継ぎコード">
+  <button onclick="load()">引き継ぎ</button>
 </div>
 
-<div id="home" class="screen">
-  <!-- ★ 修正：id を追加 -->
-  <button id="profileBtn">👤 プロフィール</button>
+<div id="app" hidden>
+  <header>
+    <span id="level"></span>
+    <div class="exp-bar"><div id="exp"></div></div>
+    <button onclick="openProfile()">⚙️</button>
+  </header>
 
-  <div class="card">
-    Lv <span id="level"></span>
-    <div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
-  </div>
+  <main id="home">
+    <h2 id="timer">00:00:00</h2>
+    <select id="subject"></select>
+    <button id="startBtn" onclick="start()">START</button>
+    <button id="stopBtn" onclick="stop()" hidden>STOP</button>
+    <button id="saveBtn" onclick="save()" hidden>保存</button>
+  </main>
 
-  <div class="card">
-    <h3>✍️ 手動記録</h3>
-    <select id="manualSubject"></select>
-    <input id="h" type="number" placeholder="時間">
-    <input id="m" type="number" placeholder="分">
-    <button onclick="manualSave()">保存</button>
-  </div>
+  <canvas id="chart"></canvas>
 
-  <div class="card">
-    <h3>➕ 科目追加</h3>
-    <input id="newSub">
-    <button onclick="addSubject()">追加</button>
-  </div>
-
-  <div class="card">
-    <h3>🗑 科目管理</h3>
-    <div id="subjectManage"></div>
-  </div>
-
-  <!-- ★ 修正：id を追加 -->
-  <button id="timerBtn" onclick="openTimer()">⏱ タイマー</button>
-
-  <div class="card">
-    <h3>📊 勉強グラフ</h3>
-    <canvas id="chartEl"></canvas>
-  </div>
-
-  <button onclick="openAI()">🤖 模擬AI判定</button>
+  <button onclick="aiEval()">AI評価</button>
 </div>
-
-<div id="profile" class="screen">
-  <button onclick="goHome()">← 戻る</button>
-  <div class="card">
-    <p>レベル: <span id="pLevel"></span></p>
-    <p>合計時間: <span id="pTime"></span> 時間</p>
-    <p>連続日数: <span id="pStreak"></span></p>
-  </div>
-</div>
-
-<div id="timerFull" class="screen timer-full">
-  <select id="timerSubject"></select>
-  <div id="timerText">0:00</div>
-  <div class="timer-btns">
-    <button onclick="startTimer()">START</button>
-    <button onclick="stopTimer()">STOP</button>
-    <button onclick="saveTimer()">保存</button>
-  </div>
-</div>
-
-<div id="ai" class="screen">
-  <button onclick="goHome()">← 戻る</button>
-  <div class="card">
-    <h2>🤖 AI学習評価</h2>
-    <p id="aiOverall"></p>
-  </div>
-</div>
-
-<div id="profile" class="screen">
-  <button id="profileBackBtn">← 戻る</button>
-
-  <div class="card">
-    <p>ニックネーム</p>
-    <input id="nicknameInput">
-    <button onclick="saveNickname()">変更</button>
-
-    <p>連続記録日数: <span id="pStreak"></span> 日</p>
-    <p>最大連続: <span id="pMaxStreak"></span> 日</p>
-    <p>合計時間: <span id="pTime"></span> 時間</p>
-  </div>
-</div>
-
 
 <script src="app.js"></script>
 </body>
