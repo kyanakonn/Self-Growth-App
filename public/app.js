@@ -129,21 +129,17 @@ function drawChart() {
 /* ---------- 設定・プロフィール ---------- */
 
 function openSettings() {
-  settings.hidden = false;
+  settings.style.display = "flex";
 }
 
 function closeSettings() {
-  settings.hidden = true;
-}
-
-function saveSettings() {
-  data.weeklyGoal = +weeklyGoalInput.value;
-  saveServer();
-  closeSettings();
+  settings.style.display = "none";
 }
 
 function openProfile() {
-  profile.hidden = false;
+  settings.style.display = "none";   // ← 先に閉じる
+  profile.style.display = "flex";
+
   profileText.innerText = `
 ニックネーム：${data.nickname}
 レベル：${Math.floor(Math.sqrt(data.exp / 30))}
@@ -155,8 +151,22 @@ function openProfile() {
 }
 
 function closeProfile() {
-  profile.hidden = true;
+  profile.style.display = "none";
 }
+
+function loadData(d) {
+  data = d;
+
+  // 🔒 念のためすべて閉じる
+  settings.style.display = "none";
+  profile.style.display = "none";
+
+  document.getElementById("start").hidden = true;
+  document.getElementById("app").hidden = false;
+
+  updateUI();
+}
+
 
 /* ---------- 共通 ---------- */
 
