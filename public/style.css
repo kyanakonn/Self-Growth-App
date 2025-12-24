@@ -1,45 +1,11 @@
-body {
-  font-family: system-ui;
-  background: #111;
-  color: #fff;
-  margin: 0;
-}
-
-button {
-  background: #4caf50;
-  color: #fff;
-  border: none;
-  padding: 12px;
-  margin: 6px;
-  border-radius: 12px;
-}
-
-.exp-bar {
-  background: #333;
-  height: 12px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-#exp {
-  background: linear-gradient(90deg,#0f0,#8f8);
-  height: 100%;
-  width: 0%;
-  transition: width .5s;
-}
-
-#timer {
-  font-size: 48px;
-  text-align: center;
-}
-
 .modal {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.7);
-  display: flex;
+  display: none;            /* ← 重要 */
   justify-content: center;
   align-items: center;
+  z-index: 1000;            /* ← 重要 */
 }
 
 .modal-content {
@@ -49,4 +15,3 @@ button {
   width: 90%;
   max-width: 400px;
 }
-
