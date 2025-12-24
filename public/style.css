@@ -60,3 +60,14 @@ button{
 }
 
 .hidden{display:none}
+
+/* タイマー画面は非表示時にクリックを奪わない */
+.timer-full{
+  pointer-events: none;
+}
+
+/* 表示中（active）のときだけ操作可能にする */
+.screen.active.timer-full{
+  display: flex;          /* 既存 display:none を上書き */
+  pointer-events: auto;
+}
