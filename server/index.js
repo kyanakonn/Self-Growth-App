@@ -15,6 +15,13 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 const db = new sqlite3.Database("./db.sqlite");
 
+/* ===== 日本時間の日付 ===== */
+function todayJP(offset = 0) {
+  const d = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+
 /* ===== DB初期化 ===== */
 db.serialize(() => {
   db.run(`
@@ -50,19 +57,14 @@ db.serialize(() => {
       level INTEGER,
       totalMinutes INTEGER,
       streak INTEGER,
-      maxStreak INTEGER
+      maxStreak INTEGER,
+      lastRecordDate TEXT
     )
   `);
 });
 
-/* ===== ユーティリティ ===== */
-const DEFAULT_SUBJECTS = [
-  "リスニング",
-  "リーディング",
-  "スピーキング",
-  "世界史",
-  "国語"
-];
+/* ===== 初期科目 ===== */
+const BASE_SUBJECTS = ["リスニング","リーディング","スピーキング","世界史","国語"];
 
 function generateCode() {
   return Math.floor(10000000 + Math.random() * 90000000).toString();
@@ -73,7 +75,7 @@ app.post("/api/login", (req, res) => {
   const { code, nickname } = req.body;
 
   if (code) {
-    db.get("SELECT id FROM users WHERE id=?", [code], (e, row) => {
+    db.get("SELECT id FROM users WHERE id=?", [code], (_, row) => {
       if (!row) return res.status(404).json({ error: "not found" });
       res.json({ userId: code });
     });
@@ -81,22 +83,19 @@ app.post("/api/login", (req, res) => {
   }
 
   const userId = generateCode();
+
   db.run("INSERT INTO users VALUES (?,?,?)", [
     userId,
     nickname || "User",
     Date.now()
   ]);
 
-  db.run("INSERT INTO profile VALUES (?,?,?,?,?,?)", [
-    userId,
-    0,
-    1,
-    0,
-    0,
-    0
-  ]);
+  db.run(
+    "INSERT INTO profile VALUES (?,?,?,?,?,?,?)",
+    [userId, 0, 1, 0, 0, 0, null]
+  );
 
-  DEFAULT_SUBJECTS.forEach(name => {
+  BASE_SUBJECTS.forEach(name => {
     db.run(
       "INSERT INTO subjects VALUES (?,?,?)",
       [crypto.randomUUID(), userId, name]
@@ -132,17 +131,30 @@ app.delete("/api/subject/:id", (req, res) => {
   );
 });
 
-/* ===== ログ ===== */
+/* ===== ログ（streak 正確計算） ===== */
 app.post("/api/log", (req, res) => {
   const { userId, subjectId, minutes } = req.body;
-  const date = new Date().toISOString().slice(0, 10);
+  const today = todayJP();
 
   db.run(
     "INSERT INTO logs VALUES (?,?,?,?,?)",
-    [crypto.randomUUID(), userId, subjectId, minutes, date]
+    [crypto.randomUUID(), userId, subjectId, minutes, today]
   );
 
   db.get("SELECT * FROM profile WHERE userId=?", [userId], (_, p) => {
+    let streak = p.streak;
+    let last = p.lastRecordDate;
+
+    if (last === today) {
+      // 同日：何もしない
+    } else if (last === todayJP(-1)) {
+      streak += 1;
+    } else {
+      streak = 1;
+    }
+
+    const maxStreak = Math.max(streak, p.maxStreak);
+
     let exp = p.exp + minutes;
     let level = p.level;
 
@@ -152,10 +164,21 @@ app.post("/api/log", (req, res) => {
     }
 
     db.run(
-      `UPDATE profile
-       SET exp=?, level=?, totalMinutes=totalMinutes+?
-       WHERE userId=?`,
-      [Math.floor(exp), level, minutes, userId]
+      `
+      UPDATE profile
+      SET exp=?, level=?, totalMinutes=totalMinutes+?,
+          streak=?, maxStreak=?, lastRecordDate=?
+      WHERE userId=?
+      `,
+      [
+        Math.floor(exp),
+        level,
+        minutes,
+        streak,
+        maxStreak,
+        today,
+        userId
+      ]
     );
 
     res.json({ ok: true });
@@ -177,49 +200,6 @@ app.get("/api/logs/:userId", (req, res) => {
     "SELECT * FROM logs WHERE userId=?",
     [req.params.userId],
     (_, rows) => res.json(rows || [])
-  );
-});
-
-/* ===== AI分析（強化版） ===== */
-app.post("/api/ai-analysis", (req, res) => {
-  const { userId } = req.body;
-  const today = new Date().toISOString().slice(0, 10);
-
-  db.all(
-    `
-    SELECT s.name, SUM(l.minutes) as minutes
-    FROM subjects s
-    LEFT JOIN logs l ON s.id=l.subjectId AND l.date=?
-    WHERE s.userId=?
-    GROUP BY s.name
-    `,
-    [today, userId],
-    (_, rows) => {
-      db.get(
-        "SELECT * FROM profile WHERE userId=?",
-        [userId],
-        (_, p) => {
-          const total = rows.reduce((a, b) => a + (b.minutes || 0), 0);
-
-          const comments = [];
-          if (total < 60) comments.push("今日は最低限。明日は必ず巻き返そう。");
-          else if (total < 180) comments.push("合格者平均ライン。悪くない。");
-          else comments.push("商学部上位層の学習量です。");
-
-          if (p.streak >= 30)
-            comments.push("完全に習慣化。合格する人の行動です。");
-          else if (p.streak >= 7)
-            comments.push("継続力が身についてきました。");
-
-          res.json({
-            total,
-            streak: p.streak,
-            comments,
-            subjects: rows
-          });
-        }
-      );
-    }
   );
 });
 
