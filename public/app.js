@@ -82,6 +82,8 @@ function updateUI() {
   updateExp();
   drawChart();
   updateWeeklyInfo();
+  updateGoalsUI();
+updateExpUI();
 }
 
 /* ---------- タイマー ---------- */
@@ -294,6 +296,19 @@ function updateGoalsUI() {
   if (dailyGoalMinutes > 0 && todayMinutes >= dailyGoalMinutes) {
     showDailyClear();
   }
+}
+
+function showDailyClear() {
+  const o = document.getElementById("dailyClearOverlay");
+  if (o.style.display === "flex") return;
+
+  o.style.display = "flex";
+  document.body.classList.add("flash");
+
+  setTimeout(() => {
+    o.style.display = "none";
+    document.body.classList.remove("flash");
+  }, 1200);
 }
 
 /* ---------- 共通 ---------- */
