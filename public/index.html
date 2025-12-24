@@ -5,24 +5,267 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Self Growth App</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{margin:0;font-family:sans-serif;background:#f4f6f8}
+.screen{display:none;padding:16px}
+.screen.active{display:block}
+button{padding:8px 12px;margin:4px}
+.card{background:#fff;padding:12px;border-radius:10px;margin-bottom:12px}
+.hidden{display:none}
+.exp-bar{background:#ddd;height:10px;border-radius:5px;overflow:hidden}
+.exp-fill{background:#4caf50;height:100%;width:0%}
+.timer-full{text-align:center}
+#timerText{font-size:48px;margin:20px 0}
+.subject-item{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.subject-item button{background:#ff5c5c;color:white;border:none;border-radius:6px}
+</style>
 </head>
 
 <body>
 
-<nav>
-  <button id="homeBtn">ホーム</button>
-  <button id="profileBtn">プロフィール</button>
-  <button id="aiBtn">模擬AI評価</button>
-</nav>
-
-<select id="subjectSelect"></select>
-
-<div id="screen-home" class="screen active"></div>
-<div id="screen-profile" class="screen"></div>
-<div id="screen-ai" class="screen">
-  <div id="aiOverall"></div>
+<!-- ===== スタート ===== -->
+<div id="start" class="screen active">
+<h1>📚 Self Growth App</h1>
+<button onclick="newStart()">新規スタート</button>
 </div>
 
-<script src="app.js"></script>
+<!-- ===== ホーム ===== -->
+<div id="home" class="screen">
+<button onclick="goProfile()">👤 プロフィール</button>
+
+<div class="card">
+Lv <span id="level"></span>
+<div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
+</div>
+
+<div class="card">
+<h3>✍️ 手動記録</h3>
+<select id="manualSubject"></select>
+<input id="h" type="number" placeholder="時間">
+<input id="m" type="number" placeholder="分">
+<button onclick="manualSave()">保存</button>
+</div>
+
+<div class="card">
+<h3>➕ 科目追加</h3>
+<input id="newSub">
+<button onclick="addSubject()">追加</button>
+</div>
+
+<div class="card">
+<h3>🗑 科目管理</h3>
+<div id="subjectManage"></div>
+</div>
+
+<button onclick="openTimer()">⏱ タイマー</button>
+
+<div class="card">
+<h3>📊 勉強グラフ</h3>
+<canvas id="chartEl"></canvas>
+</div>
+
+<button onclick="openAI()">🤖 模擬AI判定</button>
+</div>
+
+<!-- ===== プロフィール ===== -->
+<div id="profile" class="screen">
+<button onclick="goHome()">← 戻る</button>
+<div class="card">
+<p>レベル: <span id="pLevel"></span></p>
+<p>合計時間: <span id="pTime"></span> 時間</p>
+<p>連続日数: <span id="pStreak"></span></p>
+</div>
+</div>
+
+<!-- ===== タイマー ===== -->
+<div id="timerFull" class="screen timer-full">
+<select id="timerSubject"></select>
+<div id="timerText">0:00</div>
+<button onclick="startTimer()">START</button>
+<button onclick="stopTimer()">STOP</button>
+<button onclick="saveTimer()">保存</button>
+</div>
+
+<!-- ===== AI ===== -->
+<div id="ai" class="screen">
+<button onclick="goHome()">← 戻る</button>
+<div class="card">
+<h2>🤖 AI学習評価</h2>
+<p id="aiOverall"></p>
+</div>
+</div>
+
+<script>
+/* ===== 基本データ ===== */
+const DEFAULT_SUBJECTS = ["英語","国語","世界史","数学","理科"]
+
+let data = JSON.parse(localStorage.getItem("sgData")) || {
+  subjects:[...DEFAULT_SUBJECTS],
+  logs:{},
+  exp:0,
+  level:1,
+  streak:0,
+  lastDate:null
+}
+
+let timerSec = 0
+let timerInt = null
+
+/* ===== 画面 ===== */
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"))
+  document.getElementById(id).classList.add("active")
+}
+function goHome(){show("home");render()}
+function goProfile(){
+  show("profile")
+  pLevel.textContent=data.level
+  pTime.textContent=(totalMinutes()/60).toFixed(1)
+  pStreak.textContent=data.streak
+}
+function openTimer(){show("timerFull");renderSubjects()}
+function openAI(){
+  show("ai")
+  aiOverall.textContent=`現在の継続力は良好です（連続${data.streak}日）`
+}
+
+/* ===== 初期化 ===== */
+function newStart(){
+  data.subjects=[...DEFAULT_SUBJECTS]
+  data.logs={}
+  data.exp=0
+  data.level=1
+  data.streak=0
+  data.lastDate=null
+  save()
+  show("home")
+  render()
+}
+
+/* ===== 科目処理 ===== */
+function renderSubjects(){
+  manualSubject.innerHTML=""
+  timerSubject.innerHTML=""
+  subjectManage.innerHTML=""
+
+  data.subjects.forEach(s=>{
+    manualSubject.add(new Option(s,s))
+    timerSubject.add(new Option(s,s))
+
+    const div=document.createElement("div")
+    div.className="subject-item"
+    div.textContent=s
+
+    if(!DEFAULT_SUBJECTS.includes(s)){
+      const btn=document.createElement("button")
+      btn.textContent="削除"
+      btn.onclick=()=>removeSubject(s)
+      div.appendChild(btn)
+    }
+    subjectManage.appendChild(div)
+  })
+}
+
+function addSubject(){
+  const v=newSub.value.trim()
+  if(!v||data.subjects.includes(v))return
+  data.subjects.push(v)
+  save()
+  newSub.value=""
+  render()
+}
+
+function removeSubject(s){
+  if(DEFAULT_SUBJECTS.includes(s))return
+  data.subjects=data.subjects.filter(x=>x!==s)
+  delete data.logs[s]
+  save()
+  render()
+}
+
+/* ===== 記録 ===== */
+function manualSave(){
+  const s=manualSubject.value
+  const min=(+h.value||0)*60+(+m.value||0)
+  if(min<=0)return
+  addLog(s,min)
+  h.value=m.value=""
+  render()
+}
+
+function startTimer(){
+  if(timerInt)return
+  timerInt=setInterval(()=>{
+    timerSec++
+    timerText.textContent=`${Math.floor(timerSec/60)}:${(timerSec%60).toString().padStart(2,"0")}`
+  },1000)
+}
+function stopTimer(){
+  clearInterval(timerInt)
+  timerInt=null
+}
+function saveTimer(){
+  stopTimer()
+  if(timerSec>=60){
+    addLog(timerSubject.value,Math.floor(timerSec/60))
+  }
+  timerSec=0
+  timerText.textContent="0:00"
+  goHome()
+}
+
+/* ===== ログ・経験値 ===== */
+function addLog(s,min){
+  data.logs[s]=(data.logs[s]||0)+min
+  data.exp+=min
+  updateStreak()
+  while(data.exp>=data.level*100){
+    data.exp-=data.level*100
+    data.level++
+  }
+  save()
+}
+
+function updateStreak(){
+  const today=new Date().toDateString()
+  if(data.lastDate!==today){
+    data.streak++
+    data.lastDate=today
+  }
+}
+
+function totalMinutes(){
+  return Object.values(data.logs).reduce((a,b)=>a+b,0)
+}
+
+/* ===== グラフ ===== */
+let chart
+function renderChart(){
+  const ctx=chartEl.getContext("2d")
+  const labels=data.subjects
+  const vals=labels.map(s=>data.logs[s]||0)
+  if(chart)chart.destroy()
+  chart=new Chart(ctx,{
+    type:"bar",
+    data:{labels,datasets:[{data:vals}]}
+  })
+}
+
+/* ===== 描画 ===== */
+function render(){
+  level.textContent=data.level
+  expFill.style.width=`${(data.exp/(data.level*100))*100}%`
+  renderSubjects()
+  renderChart()
+}
+
+function save(){
+  localStorage.setItem("sgData",JSON.stringify(data))
+}
+
+/* 初期表示 */
+render()
+</script>
 </body>
 </html>
