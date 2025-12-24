@@ -18,7 +18,7 @@ let timerMinutes = 0;
 const BASE_SUBJECTS = ["リスニング","リーディング","スピーキング","世界史","国語"];
 
 /* =====================
-   起動時（★ここが重要）
+   起動時（重要）
 ===================== */
 document.addEventListener("DOMContentLoaded", initApp);
 
@@ -34,7 +34,7 @@ async function initApp() {
 }
 
 /* =====================
-   ボタン反応保証（1回で必ず反応）
+   ボタン反応保証
 ===================== */
 function bindButtons() {
   document.getElementById("profileBtn")?.addEventListener("click", goProfile);
@@ -63,25 +63,6 @@ async function newStart() {
   await loadAll();
 }
 
-async function login() {
-  if (!codeInput.value) return;
-
-  const res = await fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code: codeInput.value })
-  });
-
-  if (!res.ok) return alert("引き継ぎ失敗");
-
-  const data = await res.json();
-  userId = data.userId;
-  localStorage.setItem("userId", userId);
-
-  switchScreen("home");
-  await loadAll();
-}
-
 /* =====================
    初期ロード（順序厳守）
 ===================== */
@@ -91,9 +72,9 @@ async function loadAll() {
   profile = await fetch(`/api/profile/${userId}`).then(r => r.json());
   userInfo = await fetch(`/api/user/${userId}`).then(r => r.json());
 
-  renderSubjects();          // ← 手動＆タイマー
-  renderSubjectManage();     // ← 管理画面
-  initChart();               // ← グラフ
+  renderSubjects();          
+  renderSubjectManage();     
+  initChart();               
   updateProfile();
 }
 
@@ -175,7 +156,7 @@ async function deleteSubject(id) {
 }
 
 /* =====================
-   科目描画（★初期5科目反映）
+   科目描画（初期5科目完全反映）
 ===================== */
 function renderSubjects() {
   manualSubject.innerHTML = "";
