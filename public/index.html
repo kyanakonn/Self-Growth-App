@@ -17,12 +17,18 @@
 </div>
 
 <div id="app" hidden>
-  <header>
-  <span id="level"></span>
-  <div class="exp-bar">
-    <div id="exp"></div>
+  <header class="header">
+  <div class="header-top">
+    <div id="levelText">Lv.1</div>
+    <button id="settingBtn">⚙️</button>
   </div>
-  <button onclick="openSettings()">⚙️</button>
+
+  <div class="exp-container">
+    <div class="exp-bar">
+      <div id="exp"></div>
+    </div>
+    <div id="expInfo"></div>
+  </div>
 </header>
 
   <div class="card" id="weeklyInfo"></div>
