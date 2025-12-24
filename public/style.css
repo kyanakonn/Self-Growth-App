@@ -1,137 +1,34 @@
-body{
- margin:0;
- background:#f8fafc;
- color:#0f172a;
- font-family:system-ui
+body {
+  font-family: system-ui;
+  background: #111;
+  color: #fff;
+  margin: 0;
 }
 
-.screen{display:none;padding:16px}
-.screen.active{display:block}
-
-button{
- width:100%;
- padding:14px;
- margin-top:8px;
- border:none;
- border-radius:14px;
- background:#fff;
- box-shadow:0 4px 12px rgba(0,0,0,.12)
+button {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  margin: 6px;
+  border-radius: 12px;
 }
 
-.card{
- background:#fff;
- border-radius:18px;
- padding:16px;
- margin-top:14px;
- box-shadow:0 6px 20px rgba(0,0,0,.1)
+.exp-bar {
+  background: #333;
+  height: 12px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.exp-bar{
- height:16px;
- background:#e5e7eb;
- border-radius:10px;
- overflow:hidden
+#exp {
+  background: linear-gradient(90deg,#0f0,#8f8);
+  height: 100%;
+  width: 0%;
+  transition: width .5s;
 }
 
-.exp-fill{
- height:100%;
- background:#0f172a;
- width:0%;
- transition:width .8s
+#timer {
+  font-size: 48px;
+  text-align: center;
 }
-
-.timer-full{
- position:fixed;
- inset:0;
- background:#fff;
- display:none;
- align-items:center;
- justify-content:center;
- flex-direction:column;
- font-size:64px;
- z-index:999
-}
-
-.timer-btns{
- display:flex;
- gap:12px;
- margin-top:20px;
- width:80%
-}
-
-.hidden{display:none}
-
-/* タイマー画面は非表示時にクリックを奪わない */
-.timer-full{
-  pointer-events: none;
-}
-
-/* 表示中（active）のときだけ操作可能にする */
-.screen.active.timer-full{
-  display: flex;          /* 既存 display:none を上書き */
-  pointer-events: auto;
-}
-
-.screen{
-  display: none;
-}
-.screen.active{
-  display: block;
-}
-
-/* すべての screen を背面に */
-.screen{
-  position: relative;
-  z-index: 0;
-}
-
-/* 表示中の画面だけ最前面 */
-.screen.active{
-  z-index: 10;
-}
-
-/* timer は active のときだけ最前面 */
-.screen.active.timer-full{
-  z-index: 20;
-}
-
-/* =====================
-   📱 スマホ最適化
-===================== */
-@media (max-width: 600px) {
-
-  body {
-    font-size: 16px;
-  }
-
-  button {
-    padding: 18px;
-    font-size: 16px;
-  }
-
-  input, select {
-    width: 100%;
-    padding: 14px;
-    font-size: 16px;
-    margin-top: 6px;
-  }
-
-  .card {
-    padding: 18px;
-    margin-top: 16px;
-  }
-
-  canvas {
-    max-height: 260px;
-  }
-
-  .timer-full {
-    font-size: 72px;
-  }
-
-  .timer-btns {
-    flex-direction: column;
-    width: 90%;
-  }
-}
-
