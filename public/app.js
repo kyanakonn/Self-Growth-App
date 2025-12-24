@@ -329,3 +329,12 @@ function showWeeklyClear() {
     document.body.classList.remove("flash");
   }, 1200);
 }
+
+let currentGraph = "day";
+const subjectColors = {
+  "リスニング": "#4caf50",
+  "リーディング": "#2196f3",
+  "スピーキング": "#ff9800",
+  "世界史": "#e91e63",
+  "国語": "#9c27b0"
+};
