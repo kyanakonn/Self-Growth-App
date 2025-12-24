@@ -170,6 +170,34 @@ function updateExp() {
     `EXP ${Math.floor(data.exp)} / ${next}（次のLvまで ${Math.max(0, next - data.exp)}）`;
 }
 
+function animateExpDiff(diffExp) {
+  const step = diffExp / 30; // アニメーション分割
+  let current = 0;
+
+  const beforeLevel = calcLevel(data.exp);
+
+  const interval = setInterval(() => {
+    data.exp += step;
+    current += step;
+
+    updateExp();
+
+    if (
+      (step > 0 && current >= diffExp) ||
+      (step < 0 && current <= diffExp)
+    ) {
+      clearInterval(interval);
+      data.exp = Math.round(data.exp);
+      updateExp();
+
+      const afterLevel = calcLevel(data.exp);
+      if (afterLevel > beforeLevel) {
+        showLevelUp(afterLevel - beforeLevel);
+      }
+    }
+  }, 30);
+}
+
 /* ---------- グラフ ---------- */
 function drawChart() {
   chart?.destroy();
@@ -453,12 +481,24 @@ function saveEdit() {
 
   const h = +editHour.value || 0;
   const m = +editMin.value || 0;
-  const sec = h * 3600 + m * 60;
+  const newSec = h * 3600 + m * 60;
 
-  if (sec < 60) return alert("1分以上にしてください");
+  if (newSec < 60) return alert("1分以上にしてください");
 
-  data.logs[editingIndex].subject = editSubject.value;
-  data.logs[editingIndex].sec = sec;
+  const log = data.logs[editingIndex];
+  const oldSec = log.sec;
+
+  // 🔥 差分EXP計算
+  const diffMin = (newSec - oldSec) / 60;
+  const diffExp = diffMin * 2;
+
+  log.subject = editSubject.value;
+  log.sec = newSec;
+
+  // ⭐ EXP差分アニメーション
+  if (diffExp !== 0) {
+    animateExpDiff(diffExp);
+  }
 
   saveServer();
   updateUI();
@@ -470,7 +510,12 @@ function deleteLog() {
   if (editingIndex === null) return;
   if (!confirm("この記録を削除しますか？")) return;
 
+  const sec = data.logs[editingIndex].sec;
+  const diffExp = -(sec / 60) * 2;
+
   data.logs.splice(editingIndex, 1);
+
+  animateExpDiff(diffExp);
 
   saveServer();
   updateUI();
