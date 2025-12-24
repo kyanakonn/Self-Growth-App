@@ -16,10 +16,10 @@ app.use(express.static(path.join(__dirname, "../public")));
 const db = new sqlite3.Database("./db.sqlite");
 
 /* ===== 日本日付 ===== */
-function todayJP() {
-  return new Date(Date.now() + 9 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+function todayJP(offset = 0) {
+  const d = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
 }
 
 /* ===== DB ===== */
@@ -58,11 +58,7 @@ db.serialize(() => {
 
 /* ===== 初期5科目 ===== */
 const DEFAULT_SUBJECTS = [
-  "リスニング",
-  "リーディング",
-  "スピーキング",
-  "世界史",
-  "国語"
+  "リスニング","リーディング","スピーキング","世界史","国語"
 ];
 
 /* ===== ログイン ===== */
@@ -84,78 +80,67 @@ app.post("/api/login", (req, res) => {
   res.json({ userId });
 });
 
-/* ===== 科目取得 ===== */
+/* ===== 取得 ===== */
 app.get("/api/subjects/:userId", (req, res) => {
-  db.all(
-    "SELECT * FROM subjects WHERE userId=?",
-    [req.params.userId],
-    (_, rows) => res.json(rows)
+  db.all("SELECT * FROM subjects WHERE userId=?", [req.params.userId], (_, r) => res.json(r));
+});
+app.get("/api/logs/:userId", (req, res) => {
+  db.all("SELECT * FROM logs WHERE userId=?", [req.params.userId], (_, r) => res.json(r));
+});
+app.get("/api/profile/:userId", (req, res) => {
+  db.get("SELECT * FROM profile WHERE userId=?", [req.params.userId], (_, r) => res.json(r));
+});
+
+/* ===== 科目追加・削除 ===== */
+app.post("/api/subject", (req, res) => {
+  db.run(
+    "INSERT INTO subjects VALUES (?,?,?,0)",
+    [crypto.randomUUID(), req.body.userId, req.body.name]
   );
+  res.json({ ok:true });
+});
+
+app.delete("/api/subject/:id", (req, res) => {
+  db.run("DELETE FROM subjects WHERE id=? AND isDefault=0", [req.params.id]);
+  res.json({ ok:true });
 });
 
 /* ===== 記録 ===== */
 app.post("/api/log", (req, res) => {
   const { userId, subjectId, minutes } = req.body;
-  const today = todayJP();
+  if (!subjectId || minutes <= 0) return res.json({ ok:false });
 
-  if (minutes >= 1) {
-    db.run(
-      "INSERT INTO logs VALUES (?,?,?,?,?)",
-      [crypto.randomUUID(), userId, subjectId, minutes, today]
-    );
-  }
+  const today = todayJP();
+  db.run(
+    "INSERT INTO logs VALUES (?,?,?,?,?)",
+    [crypto.randomUUID(), userId, subjectId, minutes, today]
+  );
 
   db.get("SELECT * FROM profile WHERE userId=?", [userId], (_, p) => {
-    let streak = p.streak;
+    let streak = p.lastRecordDate === today ? p.streak :
+      p.lastRecordDate === todayJP(-1) ? p.streak + 1 : 1;
 
-    if (p.lastRecordDate === today) {
-      // 変化なし
-    } else if (p.lastRecordDate === todayJP(-1)) {
-      streak++;
-    } else {
-      streak = 1;
-    }
-
-    const maxStreak = Math.max(streak, p.maxStreak);
-
-    db.run(
-      `
+    db.run(`
       UPDATE profile
       SET totalMinutes=totalMinutes+?,
-          streak=?, maxStreak=?, lastRecordDate=?
+          streak=?, maxStreak=?,
+          lastRecordDate=?
       WHERE userId=?
-      `,
-      [minutes, streak, maxStreak, today, userId]
-    );
+    `,[minutes, streak, Math.max(streak,p.maxStreak), today, userId]);
 
-    res.json({ ok: true });
+    res.json({ ok:true });
   });
 });
 
-/* ===== 模擬AI評価 ===== */
+/* ===== AI ===== */
 app.post("/api/ai-analysis", (req, res) => {
-  const { userId } = req.body;
-
-  db.get("SELECT * FROM profile WHERE userId=?", [userId], (_, p) => {
-    const phrases = [
-      "今は基礎構築期。継続が最大の武器。",
-      "確実に前進しています。",
-      "合格者の平均に近づいています。",
-      "この習慣は強いです。",
-      "今の努力は必ず回収できます。"
-    ];
-
-    const seed = todayJP() + Math.floor(p.totalMinutes / 30);
-    const index =
-      seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0) %
-      phrases.length;
-
+  db.get("SELECT * FROM profile WHERE userId=?", [req.body.userId], (_, p) => {
     res.json({
       streak: p.streak,
       totalMinutes: p.totalMinutes,
-      phrase: phrases[index]
+      phrase: "継続は確実に力になっています。"
     });
   });
 });
 
-app.listen(3000, () => console.log("Server running"));
+app.listen(3000);
