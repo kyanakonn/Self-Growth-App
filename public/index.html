@@ -23,6 +23,8 @@
     <button onclick="openSettings()">⚙️</button>
   </header>
 
+  <div class="card" id="weeklyInfo"></div>
+
   <main id="home">
     <h2 id="timer">00:00:00</h2>
 
@@ -44,6 +46,14 @@
   <canvas id="chart"></canvas>
 
   <button onclick="aiEval()">AI評価</button>
+</div>
+
+<div class="card">
+  <h3>手動記録</h3>
+  <select id="manualSubject"></select>
+  <input type="number" id="manualHour" placeholder="時間" min="0">
+  <input type="number" id="manualMin" placeholder="分" min="0" max="59">
+  <button onclick="manualSave()">手動保存</button>
 </div>
 
 <!-- 設定モーダル -->
