@@ -44,6 +44,19 @@ db.serialize(() => {
   `);
 
   db.run(`
+  CREATE TABLE IF NOT EXISTS profile (
+    userId TEXT PRIMARY KEY,
+    nickname TEXT,
+    exp INTEGER,
+    level INTEGER,
+    totalMinutes INTEGER,
+    streak INTEGER,
+    maxStreak INTEGER,
+    lastRecordDate TEXT
+  )
+`);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS profile (
       userId TEXT PRIMARY KEY,
       exp INTEGER,
@@ -141,6 +154,32 @@ app.post("/api/ai-analysis", (req, res) => {
       phrase: "継続は確実に力になっています。"
     });
   });
+});
+
+app.post("/api/login", (req, res) => {
+  const userId = crypto.randomUUID();
+
+  db.run(
+    "INSERT INTO profile VALUES (?,?,?,?,?,?,?,?)",
+    [userId, "名前なし", 0, 1, 0, 0, 0, null]
+  );
+
+  DEFAULT_SUBJECTS.forEach(name => {
+    db.run(
+      "INSERT INTO subjects VALUES (?,?,?,1)",
+      [crypto.randomUUID(), userId, name]
+    );
+  });
+
+  res.json({ userId });
+});
+
+app.post("/api/nickname", (req, res) => {
+  db.run(
+    "UPDATE profile SET nickname=? WHERE userId=?",
+    [req.body.nickname, req.body.userId]
+  );
+  res.json({ ok:true });
 });
 
 app.listen(3000);
