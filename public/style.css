@@ -72,10 +72,12 @@ button{
   pointer-events: auto;
 }
 
-
-
-
-/* ===== 最終修正：active画面だけを最前面にする ===== */
+.screen{
+  display: none;
+}
+.screen.active{
+  display: block;
+}
 
 /* すべての screen を背面に */
 .screen{
