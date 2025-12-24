@@ -14,6 +14,9 @@ let timerStart = null;
 let timerInterval = null;
 let timerMinutes = 0;
 
+/* 初期科目（削除不可） */
+const BASE_SUBJECTS = ["リスニング","リーディング","スピーキング","世界史","国語"];
+
 /* =====================
    起動時
 ===================== */
@@ -32,8 +35,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function newStart() {
   const nickname = prompt("ニックネームを入力してください");
   if (!nickname) return;
-
-  localStorage.setItem("nickname", nickname);
 
   const res = await fetch("/api/login", {
     method: "POST",
@@ -78,6 +79,7 @@ async function loadAll() {
   userInfo = await fetch(`/api/user/${userId}`).then(r => r.json());
 
   renderSubjects();
+  renderSubjectManage();
   initChart();
   drawChart();
   updateProfile();
@@ -108,6 +110,15 @@ function goHome() {
 }
 
 /* =====================
+   プロフィール反映
+===================== */
+function updateProfile() {
+  level.textContent = profile.level;
+  const need = profile.level * profile.level * 20;
+  expFill.style.width = Math.min(100, (profile.exp / need) * 100) + "%";
+}
+
+/* =====================
    手動記録
 ===================== */
 async function manualSave() {
@@ -126,7 +137,7 @@ async function manualSave() {
 }
 
 /* =====================
-   科目追加
+   科目追加・削除
 ===================== */
 async function addSubject() {
   if (!newSub.value.trim()) return;
@@ -138,6 +149,12 @@ async function addSubject() {
   });
 
   newSub.value = "";
+  await loadAll();
+}
+
+async function deleteSubject(id) {
+  if (!confirm("この科目を削除しますか？")) return;
+  await fetch(`/api/subject/${id}`, { method: "DELETE" });
   await loadAll();
 }
 
@@ -154,35 +171,57 @@ function renderSubjects() {
   });
 }
 
-/* =====================
-   グラフ
-===================== */
-function initChart() {
-  chart = new Chart(document.getElementById("chart"), {
-    type: "bar",
-    data: { labels: [], datasets: [{ label: "分", data: [] }] }
+function renderSubjectManage() {
+  subjectManage.innerHTML = "";
+  subjects.forEach(s => {
+    const canDelete = !BASE_SUBJECTS.includes(s.name);
+    subjectManage.innerHTML += `
+      <div class="card">
+        ${s.name}
+        ${canDelete ? `<button onclick="deleteSubject('${s.id}')">削除</button>` : ""}
+      </div>
+    `;
   });
 }
 
-function changeMode(mode) {
-  chartMode = mode;
-  drawChart();
+/* =====================
+   グラフ（科目別カラー）
+===================== */
+function initChart() {
+  const colors = [
+    "#2563eb","#16a34a","#dc2626","#9333ea","#ea580c","#0f172a"
+  ];
+
+  const labels = [...new Set(logs.map(l => l.date))];
+
+  const datasets = subjects.map((s, i) => ({
+    label: s.name,
+    backgroundColor: colors[i % colors.length],
+    data: labels.map(d =>
+      logs
+        .filter(l => l.date === d && l.subjectId === s.id)
+        .reduce((a,b) => a + b.minutes, 0)
+    )
+  }));
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(chartEl, {
+    type: "bar",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      scales: { x: { stacked: true }, y: { stacked: true } }
+    }
+  });
 }
 
 function drawChart() {
-  const map = {};
-  logs.forEach(l => {
-    const key = chartMode === "day" ? l.date : l.date.slice(0,7);
-    map[key] = (map[key] || 0) + l.minutes;
-  });
-
-  chart.data.labels = Object.keys(map);
-  chart.data.datasets[0].data = Object.values(map);
-  chart.update();
+  initChart();
 }
 
 /* =====================
-   ⏱ タイマー
+   タイマー
 ===================== */
 function openTimer() {
   timerMinutes = 0;
@@ -209,6 +248,7 @@ function stopTimer() {
   clearInterval(timerInterval);
   timerMinutes = Math.floor((Date.now() - timerStart) / 60000);
   stopBtn.classList.add("hidden");
+  startBtn.classList.remove("hidden");
   saveBtn.classList.remove("hidden");
 }
 
@@ -230,7 +270,7 @@ async function saveTimer() {
 }
 
 /* =====================
-   🤖 AI分析（進化版）
+   🤖 AI評価（強化）
 ===================== */
 async function openAI() {
   switchScreen("ai");
@@ -243,51 +283,14 @@ async function openAI() {
 
   const data = await res.json();
 
-  const progress = data.progress;
-  let tone =
-    progress < 10 ? "よく始めたね。ここから一緒に積み上げよう。" :
-    progress < 40 ? "基礎は整ってきた。次は精度だ。" :
-    progress < 70 ? "完全に受験生上位層。勝ち切る段階だ。" :
-    "ここまで来た。合格は現実だ。";
-
-  aiOverall.textContent = tone + " " + data.overall;
-
-  /* 連続日数セリフ解放 */
-  if (data.streak >= 30) {
-    aiOverall.textContent += " 🔓《継続者の領域》";
-  } else if (data.streak >= 7) {
-    aiOverall.textContent += " 🔓《習慣化達成》";
-  }
+  aiOverall.innerHTML = data.comments.map(c => `• ${c}`).join("<br>");
 
   aiSubjects.innerHTML = "";
-
-  /* 弱点警告（早稲田商） */
-  const warn = [];
-
-  data.analysis.forEach(a => {
-    if (a.subject.includes("リーディング") || a.subject.includes("リスニング")) {
-      if (a.minutes < 60) warn.push("⚠️ 英語が不足しています");
-    }
-    if (a.subject === "国語" && a.minutes < 30) {
-      warn.push("⚠️ 国語の演習量が不足");
-    }
-    if (a.subject === "歴史" && a.minutes < 20) {
-      warn.push("⚠️ 世界史の接触頻度が低い");
-    }
-
+  data.subjects.forEach(s => {
     aiSubjects.innerHTML += `
       <div class="card">
-        <b>${a.subject}</b><br>
-        ${a.minutes}分<br>
-        ${a.comment}
+        <b>${s.name}</b>：${s.minutes || 0} 分
       </div>
     `;
   });
-
-  if (warn.length) {
-    aiSubjects.innerHTML =
-      `<div class="card" style="border:2px solid red">
-        <b>🚨 商学部弱点警告</b><br>${warn.join("<br>")}
-       </div>` + aiSubjects.innerHTML;
-  }
 }
