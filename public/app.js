@@ -32,8 +32,8 @@ function loadData(d) {
   data = d;
   document.getElementById("start").hidden = true;
   document.getElementById("app").hidden = false;
-  updateUI();
   checkWeeklyReset();
+  updateUI();
 }
 
 /* ---------- UI ---------- */
