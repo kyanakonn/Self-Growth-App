@@ -15,41 +15,15 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 const db = new sqlite3.Database("./db.sqlite");
 
-/* ===== 日本時間の日付 ===== */
+/* ===== 日本時間 ===== */
 function todayJP(offset = 0) {
   const d = new Date(Date.now() + 9 * 60 * 60 * 1000);
   d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
 }
 
-/* ===== DB初期化 ===== */
+/* ===== DB ===== */
 db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      nickname TEXT,
-      createdAt INTEGER
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS subjects (
-      id TEXT PRIMARY KEY,
-      userId TEXT,
-      name TEXT
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS logs (
-      id TEXT PRIMARY KEY,
-      userId TEXT,
-      subjectId TEXT,
-      minutes INTEGER,
-      date TEXT
-    )
-  `);
-
   db.run(`
     CREATE TABLE IF NOT EXISTS profile (
       userId TEXT PRIMARY KEY,
@@ -105,33 +79,7 @@ app.post("/api/login", (req, res) => {
   res.json({ userId });
 });
 
-/* ===== 科目 ===== */
-app.get("/api/subjects/:userId", (req, res) => {
-  db.all(
-    "SELECT * FROM subjects WHERE userId=?",
-    [req.params.userId],
-    (_, rows) => res.json(rows)
-  );
-});
-
-app.post("/api/subject", (req, res) => {
-  const { userId, name } = req.body;
-  if (!name) return res.json({ ok: false });
-
-  db.run(
-    "INSERT INTO subjects VALUES (?,?,?)",
-    [crypto.randomUUID(), userId, name],
-    () => res.json({ ok: true })
-  );
-});
-
-app.delete("/api/subject/:id", (req, res) => {
-  db.run("DELETE FROM subjects WHERE id=?", [req.params.id], () =>
-    res.json({ ok: true })
-  );
-});
-
-/* ===== ログ（streak 正確計算） ===== */
+/* ===== ログ（streak正確計算） ===== */
 app.post("/api/log", (req, res) => {
   const { userId, subjectId, minutes } = req.body;
   const today = todayJP();
@@ -143,12 +91,9 @@ app.post("/api/log", (req, res) => {
 
   db.get("SELECT * FROM profile WHERE userId=?", [userId], (_, p) => {
     let streak = p.streak;
-    let last = p.lastRecordDate;
-
-    if (last === today) {
-      // 同日：何もしない
-    } else if (last === todayJP(-1)) {
-      streak += 1;
+    if (p.lastRecordDate === today) {
+    } else if (p.lastRecordDate === todayJP(-1)) {
+      streak++;
     } else {
       streak = 1;
     }
@@ -157,7 +102,6 @@ app.post("/api/log", (req, res) => {
 
     let exp = p.exp + minutes;
     let level = p.level;
-
     while (exp >= level * level * 20) {
       exp -= level * level * 20;
       level++;
@@ -170,18 +114,68 @@ app.post("/api/log", (req, res) => {
           streak=?, maxStreak=?, lastRecordDate=?
       WHERE userId=?
       `,
-      [
-        Math.floor(exp),
-        level,
-        minutes,
-        streak,
-        maxStreak,
-        today,
-        userId
-      ]
+      [Math.floor(exp), level, minutes, streak, maxStreak, today, userId]
     );
 
     res.json({ ok: true });
+  });
+});
+
+/* ===== 🧠 合格確率AI ===== */
+app.post("/api/ai-analysis", (req, res) => {
+  const { userId } = req.body;
+
+  db.get("SELECT * FROM profile WHERE userId=?", [userId], (_, p) => {
+    db.all(
+      `
+      SELECT date, SUM(minutes) as minutes
+      FROM logs
+      WHERE userId=?
+      GROUP BY date
+      ORDER BY date DESC
+      LIMIT 7
+      `,
+      [userId],
+      (_, rows) => {
+
+        const totalHours = p.totalMinutes / 60;
+        const progress = Math.min(1, totalHours / 3000);
+
+        const avg7 =
+          rows.reduce((a, b) => a + b.minutes, 0) / Math.max(1, rows.length);
+
+        /* ===== 合格確率計算 ===== */
+        let prob =
+          progress * 45 +
+          Math.min(p.streak, 60) * 0.6 +
+          Math.min(avg7 / 180, 1) * 25;
+
+        prob = Math.min(95, Math.max(5, Math.round(prob)));
+
+        let rank = "D";
+        if (prob >= 80) rank = "S";
+        else if (prob >= 65) rank = "A";
+        else if (prob >= 45) rank = "B";
+        else if (prob >= 25) rank = "C";
+
+        const comments = {
+          S: "合格は射程圏内。今の生活がそのまま合格ラインです。",
+          A: "かなり現実的。継続すれば合格者平均を超えます。",
+          B: "まだ差があるが、伸びる位置。streak維持が最重要。",
+          C: "土台作り段階。量と連続性を最優先で。",
+          D: "今は準備期。今日の1時間が未来を変えます。"
+        };
+
+        res.json({
+          probability: prob,
+          rank,
+          comment: comments[rank],
+          streak: p.streak,
+          totalHours: totalHours.toFixed(1),
+          avg7: Math.round(avg7)
+        });
+      }
+    );
   });
 });
 
@@ -191,15 +185,6 @@ app.get("/api/profile/:userId", (req, res) => {
     "SELECT * FROM profile WHERE userId=?",
     [req.params.userId],
     (_, row) => res.json(row)
-  );
-});
-
-/* ===== ログ取得 ===== */
-app.get("/api/logs/:userId", (req, res) => {
-  db.all(
-    "SELECT * FROM logs WHERE userId=?",
-    [req.params.userId],
-    (_, rows) => res.json(rows || [])
   );
 });
 
