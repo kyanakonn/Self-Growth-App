@@ -7,11 +7,18 @@ body {
 }
 
 /* ===== レイアウト ===== */
-header {
+.header {
   padding: 12px;
+}
+
+.header-top {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
+}
+
+.exp-container {
+  margin-top: 8px;
 }
 
 main {
