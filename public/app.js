@@ -71,14 +71,21 @@ function updateUI() {
 
 function start() {
   startTime = Date.now();
+
+  document.getElementById("timerFull").style.display = "flex";
+
   timerInterval = setInterval(() => {
-    timer.innerText = fmt((Date.now() - startTime) / 1000);
+    const t = fmt((Date.now() - startTime) / 1000);
+    timer.innerText = t;
+    timerFullTime.innerText = t;
   }, 1000);
+
   toggle(true);
 }
 
 function stop() {
   clearInterval(timerInterval);
+  document.getElementById("timerFull").style.display = "none";
   toggle(false);
 }
 
