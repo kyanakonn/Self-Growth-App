@@ -159,3 +159,30 @@ function renderAI(d) {
   aiOverall.textContent =
     d.unlockComment ? "🔓 " + d.unlockComment : d.overall;
 }
+
+/* ===== 未定義関数の補完（既存機能は削除しない） ===== */
+
+function manualSave() {
+  console.warn("manualSave is not implemented yet");
+}
+
+function addSubject() {
+  console.warn("addSubject is not implemented yet");
+}
+
+function openTimer() {
+  switchScreen("timerFull");
+}
+
+function startTimer() {}
+function stopTimer() {}
+function saveTimer() {}
+
+function changeMode(mode) {
+  console.log("changeMode:", mode);
+}
+
+function openAI() {
+  switchScreen("ai");
+}
+
