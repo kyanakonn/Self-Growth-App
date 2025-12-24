@@ -262,6 +262,20 @@ function closeProfile() {
   profile.style.display = "none";
 }
 
+function saveGoals() {
+  const w = Number(weeklyGoalInput.value);
+  const d = Number(dailyGoalInput.value);
+
+  if (w > 0) weeklyGoalMinutes = w * 60;
+  if (d > 0) dailyGoalMinutes = d * 60;
+
+  localStorage.setItem("weeklyGoal", weeklyGoalMinutes);
+  localStorage.setItem("dailyGoal", dailyGoalMinutes);
+
+  closeSetting();
+  updateUI();
+}
+
 /* ---------- 共通 ---------- */
 
 function toggle(running) {
