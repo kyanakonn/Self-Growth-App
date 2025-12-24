@@ -135,3 +135,9 @@ async function loadAll() {
   renderManage();
   renderChart();
 }
+
+function bindButtons() {
+  document.getElementById("profileBtn")?.addEventListener("click", goProfile);
+  document.getElementById("timerBtn")?.addEventListener("click", openTimer);
+  document.getElementById("profileBackBtn")?.addEventListener("click", goHome);
+}
