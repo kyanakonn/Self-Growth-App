@@ -252,29 +252,40 @@ function stopTimer() {
   saveBtn.classList.remove("hidden");
 }
 
-async function saveTimer() {
-  if (timerMinutes <= 0) return;
+async function loadSubjects() {
+  const res = await fetch(`/api/subjects/${userId}`);
+  const subjects = await res.json();
 
-  await fetch("/api/log", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId,
-      subjectId: timerSubject.value,
-      minutes: timerMinutes
-    })
+  subjectSelect.innerHTML = "";
+  subjects.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = s.name;
+    subjectSelect.appendChild(opt);
   });
-
-  await loadAll();
-  switchScreen("home");
 }
 
-/* =====================
-   🤖 AI評価（強化）
-===================== */
-async function openAI() {
-  switchScreen("ai");
+/* ===== タイマー保存 ===== */
+async function saveTimer(seconds) {
+  const minutes = Math.floor(seconds / 60);
 
+  if (minutes >= 1) {
+    await fetch("/api/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        subjectId: subjectSelect.value,
+        minutes
+      })
+    });
+  }
+
+  switchScreen("home"); // ← 1分未満でも必ず戻る
+}
+
+/* ===== 模擬AI評価 ===== */
+async function openAI() {
   const res = await fetch("/api/ai-analysis", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -284,11 +295,8 @@ async function openAI() {
   const d = await res.json();
 
   aiOverall.innerHTML = `
-    <h3>🎯 合格確率：${d.probability}%（${d.rank}ランク）</h3>
-    <p>${d.comment}</p>
-    <hr>
-    <p>🔥 連続記録：${d.streak} 日</p>
-    <p>📚 総学習：${d.totalHours} 時間 / 3000</p>
-    <p>📈 直近7日平均：${d.avg7} 分/日</p>
+    <p>🔥 streak：${d.streak} 日</p>
+    <p>📚 合計：${Math.floor(d.totalMinutes / 60)} 時間</p>
+    <p>🧠 評価：${d.phrase}</p>
   `;
 }
