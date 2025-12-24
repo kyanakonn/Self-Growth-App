@@ -81,6 +81,21 @@
   </div>
 </div>
 
+<div id="profile" class="screen">
+  <button id="profileBackBtn">← 戻る</button>
+
+  <div class="card">
+    <p>ニックネーム</p>
+    <input id="nicknameInput">
+    <button onclick="saveNickname()">変更</button>
+
+    <p>連続記録日数: <span id="pStreak"></span> 日</p>
+    <p>最大連続: <span id="pMaxStreak"></span> 日</p>
+    <p>合計時間: <span id="pTime"></span> 時間</p>
+  </div>
+</div>
+
+
 <script src="app.js"></script>
 </body>
 </html>
