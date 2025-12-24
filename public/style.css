@@ -115,6 +115,7 @@ input, select {
   justify-content: center;
   align-items: center;
   z-index: 2000;
+  pointer-events: none; /* ← これを追加 */
   color: #0f0;
   font-size: 36px;
   font-weight: bold;
