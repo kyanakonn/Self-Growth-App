@@ -102,3 +102,43 @@ button{
   z-index: 20;
 }
 
+/* =====================
+   📱 スマホ最適化
+===================== */
+@media (max-width: 600px) {
+
+  body {
+    font-size: 16px;
+  }
+
+  button {
+    padding: 18px;
+    font-size: 16px;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    margin-top: 6px;
+  }
+
+  .card {
+    padding: 18px;
+    margin-top: 16px;
+  }
+
+  canvas {
+    max-height: 260px;
+  }
+
+  .timer-full {
+    font-size: 72px;
+  }
+
+  .timer-btns {
+    flex-direction: column;
+    width: 90%;
+  }
+}
+
