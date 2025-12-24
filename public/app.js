@@ -24,7 +24,7 @@ const expInfo = document.getElementById("expInfo");
 const settings = document.getElementById("settings");
 const profile = document.getElementById("profile");
 const profileText = document.getElementById("profileText");
-
+let dailyGoalMinutes = 0; // 1日の目標（分）
 let code, data;
 let startTime, timerInterval;
 
