@@ -33,6 +33,7 @@ function loadData(d) {
   document.getElementById("start").hidden = true;
   document.getElementById("app").hidden = false;
   updateUI();
+  checkWeeklyReset();
 }
 
 /* ---------- UI ---------- */
@@ -44,6 +45,7 @@ function updateUI() {
   weeklyGoalInput.value = data.weeklyGoal;
   updateExp();
   drawChart();
+  updateWeeklyInfo();
 }
 
 /* ---------- タイマー ---------- */
@@ -70,17 +72,19 @@ function save() {
 }
 
 /* ---------- 手動記録 ---------- */
-
 function manualSave() {
-  const h = +manualHour.value;
-  const m = +manualMin.value;
+  const h = +manualHour.value || 0;
+  const m = +manualMin.value || 0;
   const sec = h * 3600 + m * 60;
 
   if (!manualSubject.value) return alert("科目を選択してください");
   if (sec < 60) return alert("1分以上入力してください");
 
   addLog(manualSubject.value, sec);
-  manualHour.value = manualMin.value = "";
+
+  // ✅ 入力クリア
+  manualHour.value = "";
+  manualMin.value = "";
 }
 
 /* ---------- ログ ---------- */
@@ -202,3 +206,51 @@ function getWeekEnd() {
   end.setHours(23, 59, 59, 999);
   return end;
 }
+
+function saveSettings() {
+  if (data.weeklyGoalLocked && new Date() < new Date(data.weeklyGoalEnd)) {
+    alert("今週の目標は変更できません");
+    return;
+  }
+
+  data.weeklyGoal = +weeklyGoalInput.value;
+  data.weeklyGoalEnd = getWeekEnd().toISOString();
+  data.weeklyGoalLocked = true;
+
+  saveServer();
+  closeSettings();
+  updateWeeklyInfo();
+}
+
+function updateWeeklyInfo() {
+  const box = document.getElementById("weeklyInfo");
+  if (!data.weeklyGoal) {
+    box.innerText = "週目標：未設定";
+    return;
+  }
+
+  const weekLogs = data.logs.filter(l => {
+    const d = new Date(l.date);
+    return d <= new Date(data.weeklyGoalEnd);
+  });
+
+  const usedMin = weekLogs.reduce((a,l)=>a+l.sec,0)/60;
+  const remain = Math.max(0, data.weeklyGoal*60 - usedMin);
+
+  const h = Math.floor(remain / 60);
+  const m = Math.floor(remain % 60);
+
+  box.innerHTML = `
+    <h3>週目標 ${data.weeklyGoal}時間</h3>
+    <p>残り ${h}時間 ${m}分</p>
+  `;
+}
+
+function checkWeeklyReset() {
+  if (data.weeklyGoalEnd && new Date() > new Date(data.weeklyGoalEnd)) {
+    data.weeklyGoalLocked = false;
+    data.weeklyGoalEnd = null;
+    saveServer();
+  }
+}
+
