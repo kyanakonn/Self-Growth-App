@@ -276,6 +276,26 @@ function saveGoals() {
   updateUI();
 }
 
+function updateGoalsUI() {
+  const todayMinutes = getTodayTotalMinutes();
+  const weeklyMinutes = getThisWeekTotalMinutes();
+
+  // 週
+  const wRemain = Math.max(weeklyGoalMinutes - weeklyMinutes, 0);
+  weeklyGoalText.textContent =
+    `週目標 残り ${Math.floor(wRemain/60)}時間 ${wRemain%60}分`;
+
+  // 日
+  const dRemain = Math.max(dailyGoalMinutes - todayMinutes, 0);
+  dailyGoalText.textContent =
+    `今日の目標 残り ${Math.floor(dRemain/60)}時間 ${dRemain%60}分`;
+
+  // 🎉 クリア演出
+  if (dailyGoalMinutes > 0 && todayMinutes >= dailyGoalMinutes) {
+    showDailyClear();
+  }
+}
+
 /* ---------- 共通 ---------- */
 
 function toggle(running) {
