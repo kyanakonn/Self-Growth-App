@@ -155,3 +155,13 @@ input, select {
   font-size: 64px;
   margin-bottom: 40px;
 }
+
+.log-item {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+}
+
+.log-item:hover {
+  background: #222;
+}
