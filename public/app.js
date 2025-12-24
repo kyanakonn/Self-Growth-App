@@ -18,16 +18,29 @@ let timerMinutes = 0;
 const BASE_SUBJECTS = ["リスニング","リーディング","スピーキング","世界史","国語"];
 
 /* =====================
-   起動時
+   起動時（★ここが重要）
 ===================== */
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", initApp);
+
+async function initApp() {
+  bindButtons();
+
   if (userId) {
     switchScreen("home");
     await loadAll();
   } else {
     switchScreen("start");
   }
-});
+}
+
+/* =====================
+   ボタン反応保証（1回で必ず反応）
+===================== */
+function bindButtons() {
+  document.getElementById("profileBtn")?.addEventListener("click", goProfile);
+  document.getElementById("homeBtn")?.addEventListener("click", goHome);
+  document.getElementById("aiBtn")?.addEventListener("click", openAI);
+}
 
 /* =====================
    認証
@@ -70,7 +83,7 @@ async function login() {
 }
 
 /* =====================
-   初期ロード
+   初期ロード（順序厳守）
 ===================== */
 async function loadAll() {
   subjects = await fetch(`/api/subjects/${userId}`).then(r => r.json());
@@ -78,10 +91,9 @@ async function loadAll() {
   profile = await fetch(`/api/profile/${userId}`).then(r => r.json());
   userInfo = await fetch(`/api/user/${userId}`).then(r => r.json());
 
-  renderSubjects();
-  renderSubjectManage();
-  initChart();
-  drawChart();
+  renderSubjects();          // ← 手動＆タイマー
+  renderSubjectManage();     // ← 管理画面
+  initChart();               // ← グラフ
   updateProfile();
 }
 
@@ -95,6 +107,8 @@ function switchScreen(id) {
 }
 
 function goProfile() {
+  if (!profile || !userInfo) return;
+
   pNickname.textContent = userInfo.nickname;
   pLevel.textContent = profile.level;
   pExp.textContent = profile.exp;
@@ -102,6 +116,7 @@ function goProfile() {
   pCode.textContent = userId;
   pStreak.textContent = profile.streak;
   pMaxStreak.textContent = profile.maxStreak;
+
   switchScreen("profile");
 }
 
@@ -115,7 +130,8 @@ function goHome() {
 function updateProfile() {
   level.textContent = profile.level;
   const need = profile.level * profile.level * 20;
-  expFill.style.width = Math.min(100, (profile.exp / need) * 100) + "%";
+  expFill.style.width =
+    Math.min(100, (profile.exp / need) * 100) + "%";
 }
 
 /* =====================
@@ -159,7 +175,7 @@ async function deleteSubject(id) {
 }
 
 /* =====================
-   科目描画
+   科目描画（★初期5科目反映）
 ===================== */
 function renderSubjects() {
   manualSubject.innerHTML = "";
@@ -173,19 +189,24 @@ function renderSubjects() {
 
 function renderSubjectManage() {
   subjectManage.innerHTML = "";
+
   subjects.forEach(s => {
     const canDelete = !BASE_SUBJECTS.includes(s.name);
+
     subjectManage.innerHTML += `
       <div class="card">
         ${s.name}
-        ${canDelete ? `<button onclick="deleteSubject('${s.id}')">削除</button>` : ""}
+        ${canDelete
+          ? `<button onclick="deleteSubject('${s.id}')">削除</button>`
+          : `<span class="lock">固定</span>`
+        }
       </div>
     `;
   });
 }
 
 /* =====================
-   グラフ（科目別カラー）
+   グラフ
 ===================== */
 function initChart() {
   const colors = [
@@ -216,10 +237,6 @@ function initChart() {
   });
 }
 
-function drawChart() {
-  initChart();
-}
-
 /* =====================
    タイマー
 ===================== */
@@ -248,44 +265,33 @@ function stopTimer() {
   clearInterval(timerInterval);
   timerMinutes = Math.floor((Date.now() - timerStart) / 60000);
   stopBtn.classList.add("hidden");
-  startBtn.classList.remove("hidden");
   saveBtn.classList.remove("hidden");
 }
 
-async function loadSubjects() {
-  const res = await fetch(`/api/subjects/${userId}`);
-  const subjects = await res.json();
-
-  subjectSelect.innerHTML = "";
-  subjects.forEach(s => {
-    const opt = document.createElement("option");
-    opt.value = s.id;
-    opt.textContent = s.name;
-    subjectSelect.appendChild(opt);
-  });
-}
-
-/* ===== タイマー保存 ===== */
-async function saveTimer(seconds) {
-  const minutes = Math.floor(seconds / 60);
-
-  if (minutes >= 1) {
+/* ===== タイマー保存（1分未満OK） ===== */
+async function saveTimer() {
+  if (timerMinutes >= 1) {
     await fetch("/api/log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         userId,
-        subjectId: subjectSelect.value,
-        minutes
+        subjectId: timerSubject.value,
+        minutes: timerMinutes
       })
     });
   }
 
-  switchScreen("home"); // ← 1分未満でも必ず戻る
+  switchScreen("home");
+  await loadAll();
 }
 
-/* ===== 模擬AI評価 ===== */
+/* =====================
+   模擬AI評価（即時）
+===================== */
 async function openAI() {
+  switchScreen("ai");
+
   const res = await fetch("/api/ai-analysis", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
