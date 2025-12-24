@@ -192,3 +192,13 @@ function saveServer() {
 function aiEval() {
   alert("判定：B\n合格確率：72%\nこの調子で継続しよう！");
 }
+
+function getWeekEnd() {
+  const now = new Date();
+  const day = now.getDay(); // 日0〜土6
+  const diff = 6 - day;
+  const end = new Date(now);
+  end.setDate(now.getDate() + diff);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
