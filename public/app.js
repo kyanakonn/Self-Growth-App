@@ -1,3 +1,7 @@
+let chart = null;
+
+const manualHour = document.getElementById("manualHour");
+const manualMin = document.getElementById("manualMin");
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
 const saveBtn = document.getElementById("saveBtn");
@@ -56,11 +60,15 @@ function loadData(d) {
 }
 
 /* ---------- UI ---------- */
-
 function updateUI() {
   subject.innerHTML =
     data.subjects.map(s => `<option>${s}</option>`).join("");
+
   manualSubject.innerHTML = subject.innerHTML;
+
+  manualHour.value = "";
+  manualMin.value = "";
+
   weeklyGoalInput.value = data.weeklyGoal;
   updateExp();
   drawChart();
