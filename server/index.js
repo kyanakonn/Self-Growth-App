@@ -182,4 +182,31 @@ app.post("/api/nickname", (req, res) => {
   res.json({ ok:true });
 });
 
+function ensureDefaultSubjects(userId) {
+  DEFAULT_SUBJECTS.forEach(name => {
+    db.get(
+      "SELECT 1 FROM subjects WHERE userId=? AND name=?",
+      [userId, name],
+      (_, row) => {
+        if (!row) {
+          db.run(
+            "INSERT INTO subjects VALUES (?,?,?,1)",
+            [crypto.randomUUID(), userId, name]
+          );
+        }
+      }
+    );
+  });
+}
+
+app.get("/api/subjects/:userId", (req, res) => {
+  ensureDefaultSubjects(req.params.userId);
+
+  db.all(
+    "SELECT * FROM subjects WHERE userId=?",
+    [req.params.userId],
+    (_, rows) => res.json(rows)
+  );
+});
+
 app.listen(3000);
