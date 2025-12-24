@@ -154,19 +154,35 @@ function updateExp() {
 }
 
 /* ---------- グラフ ---------- */
-
 function drawChart() {
-  chart?.remove();
+  chart?.destroy();
+
   const ctx = document.getElementById("chart");
-  const days = {};
-  data.logs.forEach(l => {
-    days[l.date] = (days[l.date] || 0) + l.sec / 3600;
-  });
+  const aggregated = aggregateLogs(currentGraph);
+  const labels = Object.keys(aggregated).slice(-7);
+
+  const datasets = data.subjects.map(sub => ({
+    label: sub,
+    data: labels.map(l => aggregated[l]?.[sub] || 0),
+    backgroundColor: subjectColors[sub] || "#555"
+  }));
+
   chart = new Chart(ctx, {
     type: "bar",
-    data: {
-      labels: Object.keys(days),
-      datasets: [{ data: Object.values(days) }]
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: c => `${c.dataset.label}: ${c.raw.toFixed(2)}h`
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true }
+      }
     }
   });
 }
@@ -338,3 +354,33 @@ const subjectColors = {
   "世界史": "#e91e63",
   "国語": "#9c27b0"
 };
+
+function changeGraph(type) {
+  currentGraph = type;
+  drawChart();
+}
+
+function aggregateLogs(type) {
+  const result = {};
+  const now = new Date();
+
+  data.logs.forEach(l => {
+    const d = new Date(l.date);
+    let key;
+
+    if (type === "day") {
+      key = l.date;
+    } else if (type === "week") {
+      const w = new Date(d);
+      w.setDate(d.getDate() - d.getDay());
+      key = w.toISOString().slice(0,10);
+    } else {
+      key = `${d.getFullYear()}-${d.getMonth()+1}`;
+    }
+
+    result[key] ??= {};
+    result[key][l.subject] = (result[key][l.subject] || 0) + l.sec / 3600;
+  });
+
+  return result;
+}
