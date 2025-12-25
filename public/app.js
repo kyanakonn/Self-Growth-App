@@ -575,3 +575,22 @@ function closeEdit() {
   editModal.style.display = "none";
   editingIndex = null;
 }
+
+function getTodayTotalMinutes() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return data.logs
+    .filter(l => l.date === today)
+    .reduce((sum, l) => sum + l.sec, 0) / 60;
+}
+
+function getThisWeekTotalMinutes() {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  return data.logs
+    .filter(l => new Date(l.date) >= startOfWeek)
+    .reduce((sum, l) => sum + l.sec, 0) / 60;
+}
