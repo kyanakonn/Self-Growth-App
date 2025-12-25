@@ -158,6 +158,26 @@ function addLog(subject, sec) {
   updateUI();
 }
 
+function deleteLog() {
+  if (editingIndex === null) return;
+  if (!confirm("この記録を削除しますか？")) return;
+
+  const sec = data.logs[editingIndex].sec;
+  const diffExp = -(sec / 60) * 2;
+
+  data.logs.splice(editingIndex, 1);
+
+  if (data.exp + diffExp < 0) {
+    data.exp = 0;
+  } else {
+    animateExpDiff(diffExp);
+  }
+
+  saveServer();
+  updateUI();
+  renderLogs();
+  closeEdit();
+}
 /* ---------- EXP ---------- */
 function gainExp(min) {
   const beforeLevel = calcLevel(data.exp);
@@ -177,7 +197,8 @@ function updateExp() {
   const next = nextLevelExp(level);
   const prev = nextLevelExp(level - 1) || 0;
 
-  const percent = ((data.exp - prev) / (next - prev)) * 100;
+  let percent = ((data.exp - prev) / (next - prev)) * 100;
+  if (!Number.isFinite(percent)) percent = 0;
 
   levelEl.innerText = `Lv.${level}`;
   exp.style.width = Math.min(100, percent) + "%";
@@ -187,30 +208,37 @@ function updateExp() {
 }
 
 function animateExpDiff(diffExp) {
-  const step = diffExp / 30;
+  if (diffExp === 0) return;
+
+  const steps = 30;
+  const step = diffExp / steps;
   let current = 0;
 
   const beforeLevel = calcLevel(data.exp);
+
+  // ✅ EXPフロートは最初に1回だけ
+  showExpFloat(diffExp);
 
   exp.classList.add("exp-animate");
   setTimeout(() => exp.classList.remove("exp-animate"), 300);
 
   const interval = setInterval(() => {
     data.exp += step;
+
+    // ✅ EXPは0未満禁止
+    if (data.exp < 0) data.exp = 0;
+
     current += step;
     updateExp();
-
-    if (diffExp !== 0) {
-+ showExpFloat(diffExp);
-  animateExpDiff(diffExp);
-}
 
     if (
       (step > 0 && current >= diffExp) ||
       (step < 0 && current <= diffExp)
     ) {
       clearInterval(interval);
-      data.exp = Math.round(data.exp);
+
+      // ✅ 最終補正
+      data.exp = Math.max(0, Math.round(data.exp));
       updateExp();
 
       const afterLevel = calcLevel(data.exp);
@@ -436,6 +464,7 @@ function checkWeeklyReset() {
 }
 
 function calcLevel(exp) {
+  if (!Number.isFinite(exp) || exp <= 0) return 0;
   return Math.floor(Math.sqrt(exp / 30));
 }
 
@@ -585,23 +614,6 @@ function saveEdit() {
   if (diffExp !== 0) {
     animateExpDiff(diffExp);
   }
-
-  saveServer();
-  updateUI();
-  renderLogs();
-  closeEdit();
-}
-
-function deleteLog() {
-  if (editingIndex === null) return;
-  if (!confirm("この記録を削除しますか？")) return;
-
-  const sec = data.logs[editingIndex].sec;
-  const diffExp = -(sec / 60) * 2;
-
-  data.logs.splice(editingIndex, 1);
-
-  animateExpDiff(diffExp);
 
   saveServer();
   updateUI();
