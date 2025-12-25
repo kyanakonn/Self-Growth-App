@@ -106,6 +106,12 @@ data.weeklyStreak ??= 0;
   data.subjects ??= [];
   data.nickname ??= "Player";
 
+   data.aiHistory ??= {
+  daily: {},   // { "2025-09-01": { grade, totalMin } }
+  weekly: {},  // { "2025-W36": { grade, totalMin } }
+  monthly: {}  // { "2025-09": { grade, totalMin } }
+};
+
   settings.style.display = "none";
   profile.style.display = "none";
 
@@ -460,6 +466,8 @@ function aiEval() {
     return;
   }
 
+   saveAIHistory(d, w, m);
+   
   const dailyComment = dailyAIComment(d.grade);
 
   alert(
@@ -762,6 +770,37 @@ function calcPassProbabilityAdvanced() {
     percent: Math.round(score * 100),
     grade: gradeFromScore(score)
   };
+}
+
+function saveAIHistory(d, w, m) {
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+
+  // 日
+  data.aiHistory.daily[today] = {
+    grade: d.grade,
+    totalMin: d.totalMin
+  };
+
+  // 週（その週の土曜日キー）
+  const weekKey =
+    `${now.getFullYear()}-W${getWeekNumber(now)}`;
+
+  data.aiHistory.weekly[weekKey] = {
+    grade: w.grade,
+    totalMin: w.totalMin
+  };
+
+  // 月
+  const monthKey =
+    `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+
+  data.aiHistory.monthly[monthKey] = {
+    grade: m.grade,
+    totalMin: m.totalMin
+  };
+
+  saveServer();
 }
 
 /* ---------- 共通 ---------- */
