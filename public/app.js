@@ -71,31 +71,22 @@ const fmt = s =>
 async function newStart() {
   try {
     const r = await fetch("/api/new", { method: "POST" });
-    if (!r.ok) throw new Error("api/new failed");
+    if (!r.ok) throw new Error("new failed");
 
     const j = await r.json();
     code = j.code;
 
+    // ⭐ ログイン状態保存
+    localStorage.setItem("loginCode", code);
+
     alert("引き継ぎコード：" + code);
 
-    // ✅ 新規データをその場で作る
-    const d = {
-      logs: [],
-      subjects: WASEDA_SUBJECTS,
-      exp: 0,
-      nickname: "Player"
-    };
-
-    localStorage.setItem("loggedIn", "true");
-    localStorage.setItem("code", code);
-    localStorage.setItem("data", JSON.stringify(d));
-
-    loadData(d);
-    showApp();
+    const data = await fetchData();
+    loadData(data);
 
   } catch (e) {
-    console.error(e);
     alert("新規スタートに失敗しました");
+    console.error(e);
   }
 }
 
@@ -109,28 +100,31 @@ async function load() {
 // 引き継ぎロード
 async function load() {
   try {
-    code = document.getElementById("codeInput").value;
-    if (!code) return alert("引き継ぎコードを入力してください");
+    const input = document.getElementById("codeInput").value.trim();
+    if (!input) return alert("コードを入力してください");
 
-    localStorage.setItem("loggedIn", "true");
-    localStorage.setItem("code", code); // ★重要
+    code = input;
+    const data = await fetchData();
 
-    const serverData = await fetchData(code);
-    loadData(serverData);
+    // ⭐ 成功したら保存
+    localStorage.setItem("loginCode", code);
 
-    showApp();
-    updateUI();
+    loadData(data);
 
   } catch (e) {
-    console.error(e);
-    alert("引き継ぎに失敗しました");
+    alert("引き継ぎコードが間違っています");
   }
 }
 
 async function fetchData() {
-  const d = localStorage.getItem("data");
-  if (!d) throw new Error("local data not found");
-  return JSON.parse(d);
+  const r = await fetch("/api/load", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code })
+  });
+
+  if (!r.ok) throw new Error("load failed");
+  return await r.json();
 }
 
 function loadData(d) {
@@ -149,7 +143,13 @@ function loadData(d) {
 
   data.exp ??= 0;
   data.logs ??= [];
-  data.subjects ??= [];
+  data.subjects ??= [
+    "リスニング",
+    "リーディング",
+    "スピーキング",
+    "世界史",
+    "国語"
+  ];
   data.nickname ??= "Player";
 
   data.aiHistory ??= {
@@ -158,11 +158,15 @@ function loadData(d) {
     monthly: {}
   };
 
+  // ✅ 画面遷移（これがないと動かない）
+  document.getElementById("start").hidden = true;
+  document.getElementById("app").hidden = false;
+
   // リセット判定
   checkWeeklyReset();
   checkDailyReset();
 
-  // UI更新だけ
+  // UI更新
   updateUI();
 }
 
@@ -1385,25 +1389,6 @@ function logout() {
   closeSettings();
 }
 
-window.addEventListener("load", async () => {
-  if (localStorage.getItem("loggedIn") !== "true") return;
-
-  const savedCode = localStorage.getItem("code");
-  if (!savedCode) return;
-
-  try {
-    code = savedCode;
-    const serverData = await fetchData(savedCode);
-    loadData(serverData);
-    showApp();
-    updateUI();
-  } catch (e) {
-    console.error(e);
-    localStorage.removeItem("loggedIn");
-    localStorage.removeItem("code");
-  }
-});
-
 function showApp() {
   settings.style.display = "none";
   profile.style.display = "none";
@@ -1411,3 +1396,17 @@ function showApp() {
   document.getElementById("start").hidden = true;
   document.getElementById("app").hidden = false;
 }
+
+window.addEventListener("load", async () => {
+  const savedCode = localStorage.getItem("loginCode");
+  if (!savedCode) return;
+
+  try {
+    code = savedCode;
+    const data = await fetchData();
+    loadData(data);
+  } catch {
+    // 壊れてたら強制ログアウト
+    localStorage.removeItem("loginCode");
+  }
+});
