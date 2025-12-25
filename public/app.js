@@ -1048,6 +1048,14 @@ function getTodayTotalMinutes() {
     .reduce((sum, l) => sum + l.sec, 0) / 60;
 }
 
+function getWeekStart() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(now.getDate() - now.getDay()); // 日曜始まり
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
 function getThisWeekTotalMinutes() {
   const now = new Date();
   const startOfWeek = new Date(now);
