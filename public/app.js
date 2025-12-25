@@ -368,7 +368,6 @@ function updateGoalsUI() {
   const dailyGoalMinutes = data.dailyGoalMinutes || 0;
   const todayMinutes = getTodayTotalMinutes();
 
-  // 日付が変わったら解除
   if (data.dailyGoalDate !== today) {
     data.dailyGoalMinutes = 0;
     data.dailyGoalDate = null;
@@ -378,8 +377,6 @@ function updateGoalsUI() {
   }
 
   const dailyRemain = Math.max(0, dailyGoalMinutes - todayMinutes);
-
-  // ✅ ここを追加（重要）
   const h = Math.floor(dailyRemain / 60);
   const m = Math.floor(dailyRemain % 60);
 
@@ -388,16 +385,15 @@ function updateGoalsUI() {
       ? `日目標 残り ${h}時間 ${m}分（${data.dailyStreak || 0}日連続達成）`
       : "日目標 未設定";
 
-  // 🎉 クリア演出（1日1回だけ）
+  // ✅ クリア判定はここだけ
   if (dailyGoalMinutes > 0 && dailyRemain <= 0 && !data.dailyCleared) {
     data.dailyCleared = true;
-    onDailyGoalCleared(); // ← ★ これも忘れず
-    showDailyClear();
+
+    onDailyGoalCleared();   // ← 履歴・連続日数
+    showDailyClear();       // ← 演出
+
     saveServer();
   }
-  if (!data.dailyGoalHistory?.[today]) {
-  onDailyGoalCleared();
-　}
 }
 
 function showDailyClear() {
@@ -745,5 +741,18 @@ function calcAchievementRate(history) {
   const total = Object.keys(history).length;
   const cleared = Object.values(history).filter(v => v).length;
   return total ? `${Math.round((cleared / total) * 100)}%` : "0%";
+}
+
+function onDailyGoalCleared() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  data.dailyGoalHistory ??= {};
+
+  if (!data.dailyGoalHistory[today]) {
+    data.dailyGoalHistory[today] = true;
+    data.dailyStreak = (data.dailyStreak || 0) + 1;
+  }
+
+  saveServer();
 }
 
