@@ -373,30 +373,25 @@ function updateGoalsUI() {
 
   const dailyRemain = Math.max(0, dailyGoalMinutes - todayMinutes);
 
-  dailyGoalEl.textContent =
-  dailyGoalMinutes > 0
-    ? `日目標 残り ${h}時間 ${m}分（${data.dailyStreak || 0}日連続達成）`
-    : "日目標 未設定";
+  // ✅ ここを追加（重要）
+  const h = Math.floor(dailyRemain / 60);
+  const m = Math.floor(dailyRemain % 60);
 
-  // 🎉 クリア演出
+  dailyGoalEl.textContent =
+    dailyGoalMinutes > 0
+      ? `日目標 残り ${h}時間 ${m}分（${data.dailyStreak || 0}日連続達成）`
+      : "日目標 未設定";
+
+  // 🎉 クリア演出（1日1回だけ）
   if (dailyGoalMinutes > 0 && dailyRemain <= 0 && !data.dailyCleared) {
     data.dailyCleared = true;
+    onDailyGoalCleared(); // ← ★ これも忘れず
     showDailyClear();
     saveServer();
   }
-}
-
-function onDailyGoalCleared() {
-  const today = new Date().toISOString().slice(0, 10);
-
-  data.dailyGoalHistory ??= {};
-
-  if (!data.dailyGoalHistory[today]) {
-    data.dailyGoalHistory[today] = true;
-    data.dailyStreak = (data.dailyStreak || 0) + 1;
-  }
-
-  saveServer();
+  if (!data.dailyGoalHistory?.[today]) {
+  onDailyGoalCleared();
+　}
 }
 
 function showDailyClear() {
