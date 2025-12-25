@@ -69,30 +69,24 @@ const fmt = s =>
 /* ---------- 初期 ---------- */
 // 新規スタート
 async function newStart() {
-  try {
-    const r = await fetch("/api/new", { method: "POST" });
-    if (!r.ok) throw new Error("new failed");
+  const r = await fetch("/api/new", { method: "POST" });
+  const j = await r.json();
 
-    const j = await r.json();
-    code = j.code;
+  code = j.code;
+  alert("引き継ぎコード：" + code);
 
-    localStorage.setItem("loggedIn", "true");
-    localStorage.setItem("code", code);
-
-    alert("引き継ぎコード：" + code);
-
-    const serverData = await fetchData(code);
-    loadData(serverData);
-
-    showApp();
-    updateUI();
-
-  } catch (e) {
-    console.error(e);
-    alert("新規スタートに失敗しました");
-  }
+  const d = await fetchData();
+  loadData(d);
+  showApp();
 }
 
+async function load() {
+  code = document.getElementById("codeInput").value;
+
+  const d = await fetchData();
+  loadData(d);
+  showApp();
+}
 // 引き継ぎロード
 async function load() {
   try {
@@ -128,13 +122,14 @@ async function fetchData(codeArg) {
 function loadData(d) {
   data = d;
 
-data.weeklyGoal ??= null;
-data.weeklyGoalLocked ??= false;
-data.weeklyGoalEnd ??= null;
-data.weeklyCleared ??= false;
+  // 🔧 必須の初期値補完（絶対消さない）
+  data.weeklyGoal ??= null;
+  data.weeklyGoalLocked ??= false;
+  data.weeklyGoalEnd ??= null;
+  data.weeklyCleared ??= false;
 
-data.weeklyGoalHistory ??= {};
-data.weeklyStreak ??= 0;
+  data.weeklyGoalHistory ??= {};
+  data.weeklyStreak ??= 0;
 
   data.longHolidayMode ??= false;
 
@@ -143,20 +138,17 @@ data.weeklyStreak ??= 0;
   data.subjects ??= [];
   data.nickname ??= "Player";
 
-   data.aiHistory ??= {
-  daily: {},   // { "2025-09-01": { grade, totalMin } }
-  weekly: {},  // { "2025-W36": { grade, totalMin } }
-  monthly: {}  // { "2025-09": { grade, totalMin } }
-};
+  data.aiHistory ??= {
+    daily: {},
+    weekly: {},
+    monthly: {}
+  };
 
-  settings.style.display = "none";
-  profile.style.display = "none";
-
-  document.getElementById("start").hidden = true;
-  document.getElementById("app").hidden = false;
-
+  // リセット判定
   checkWeeklyReset();
   checkDailyReset();
+
+  // UI更新だけ
   updateUI();
 }
 /* ---------- UI ---------- */
@@ -1392,3 +1384,11 @@ window.addEventListener("load", async () => {
     localStorage.removeItem("code");
   }
 });
+
+function showApp() {
+  settings.style.display = "none";
+  profile.style.display = "none";
+
+  document.getElementById("start").hidden = true;
+  document.getElementById("app").hidden = false;
+}
