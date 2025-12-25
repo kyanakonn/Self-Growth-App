@@ -164,6 +164,7 @@ function addLog(subject, sec) {
 function gainExp(min) {
   const beforeLevel = calcLevel(data.exp);
   data.exp += min * 2;
++ showExpFloat(min * 2);
   const afterLevel = calcLevel(data.exp);
 
   updateExp();
@@ -200,6 +201,11 @@ function animateExpDiff(diffExp) {
     data.exp += step;
     current += step;
     updateExp();
+
+    if (diffExp !== 0) {
++ showExpFloat(diffExp);
+  animateExpDiff(diffExp);
+}
 
     if (
       (step > 0 && current >= diffExp) ||
