@@ -1,4 +1,5 @@
 let chart = null;
+const nicknameText = document.getElementById("nicknameText");
 const timerFullTime = document.getElementById("timerFullTime");
 const nicknameInput = document.getElementById("nicknameInput");
 const dailyGoalInput = document.getElementById("dailyGoalInput");
@@ -88,6 +89,9 @@ function updateUI() {
   manualMin.value = "";
 
   weeklyGoalInput.value = data.weeklyGoal;
+
+  nicknameText.innerText = data.nickname || "Player";
+  
   updateExp();
   drawChart();
   updateWeeklyInfo();
