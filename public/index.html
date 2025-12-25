@@ -98,7 +98,9 @@
 </div>
     
   <button onclick="aiEval()">AI評価</button>
-    
+
+  <button onclick="openCalendar()">📅 カレンダー</button>
+
   <button onclick="toggleHolidayMode()" class="holiday-btn">
    長期休みモード：
    <span id="holidayModeText">OFF</span>
@@ -129,7 +131,6 @@
 </div>
 
 <!-- プロフィール -->
-<!-- プロフィール -->
 <div id="profile" class="modal">
   <div class="modal-content">
     <h2>プロフィール</h2>
@@ -152,6 +153,18 @@
 
 <!-- レベルアップ演出 -->
 <div id="levelUp" class="overlay">LEVEL UP!</div>
+
+<div id="calendarModal" class="modal">
+  <div class="modal-content">
+    <h2 id="calendarMonthTitle"></h2>
+
+    <div id="monthlyEval" class="calendar-monthly"></div>
+
+    <div class="calendar-grid" id="calendarGrid"></div>
+
+    <button onclick="closeCalendar()">閉じる</button>
+  </div>
+</div>
 
 <!-- 週目標クリア演出 -->
 <div id="weeklyClear" class="overlay">WEEKLY GOAL CLEAR!</div>
