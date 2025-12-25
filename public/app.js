@@ -847,8 +847,8 @@ function calcPassProbabilityAdvanced() {
   const habit = clamp((data.dailyStreak||0)/30);
 
   const score =
-    timeRate * 0.6 +
-    balance * 0.25 +
+    timeRate * 0.70 +
+    balance * 0.15 +
     habit * 0.15;
 
   return {
