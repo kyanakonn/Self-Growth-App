@@ -67,18 +67,56 @@ const fmt = s =>
   new Date(s * 1000).toISOString().substr(11, 8);
 
 /* ---------- 初期 ---------- */
-
+// 新規スタート
 async function newStart() {
-  const r = await fetch("/api/new", { method: "POST" });
-  const j = await r.json();
-  code = j.code;
-  alert("引き継ぎコード：" + code);
-  loadData(await fetchData());
+  try {
+    const r = await fetch("/api/new", { method: "POST" });
+    if (!r.ok) throw new Error("new start failed");
+
+    const j = await r.json();
+    code = j.code;
+
+    alert("引き継ぎコード：" + code);
+
+    const serverData = await fetchData();
+    loadData(serverData);
+
+    // ✅ ログイン状態を保存
+    localStorage.setItem("loggedIn", "true");
+
+    // ✅ 画面切り替え
+    showApp();
+    updateUI();
+
+  } catch (e) {
+    console.error(e);
+    alert("新規スタートに失敗しました");
+  }
 }
 
+// 引き継ぎロード
 async function load() {
-  code = document.getElementById("codeInput").value;
-  loadData(await fetchData());
+  try {
+    code = document.getElementById("codeInput").value;
+    if (!code) {
+      alert("引き継ぎコードを入力してください");
+      return;
+    }
+
+    const serverData = await fetchData();
+    loadData(serverData);
+
+    // ✅ ログイン状態を保存
+    localStorage.setItem("loggedIn", "true");
+
+    // ✅ 画面切り替え
+    showApp();
+    updateUI();
+
+  } catch (e) {
+    console.error(e);
+    alert("引き継ぎに失敗しました");
+  }
 }
 
 async function fetchData() {
@@ -1326,3 +1364,11 @@ function calcAchievementRateRaw(history, days) {
   if (total === 0) return 0;
   return cleared / total; // 0〜1
 }
+
+window.addEventListener("load", () => {
+  if (localStorage.getItem("loggedIn") === "true") {
+    showApp();
+    loadData();     // 既存のデータ復元
+    updateUI();
+  }
+});
