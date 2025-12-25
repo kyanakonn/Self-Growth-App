@@ -1365,6 +1365,18 @@ function calcAchievementRateRaw(history, days) {
   return cleared / total; // 0〜1
 }
 
+function logout() {
+  if (!confirm("ログアウトしますか？")) return;
+
+  localStorage.removeItem("loggedIn");
+
+  // 画面切り替え
+  document.getElementById("app").hidden = true;
+  document.getElementById("start").hidden = false;
+
+  closeSettings();
+}
+
 window.addEventListener("load", () => {
   if (localStorage.getItem("loggedIn") === "true") {
     showApp();
