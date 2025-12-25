@@ -61,7 +61,8 @@ async function fetchData() {
 function loadData(d) {
   data = d;
 
-  // ★ これを追加
+data.weeklyGoal ??= null;
+
   data.exp ??= 0;
   data.logs ??= [];
   data.subjects ??= [];
@@ -90,7 +91,8 @@ function updateUI() {
   manualHour.value = "";
   manualMin.value = "";
 
-  weeklyGoalInput.value = data.weeklyGoal;
+  weeklyGoalInput.value =
+  data.weeklyGoal == null ? "" : data.weeklyGoal;
 
   updateExp();
   drawChart();
@@ -459,10 +461,10 @@ function saveSettings() {
 
 function updateWeeklyInfo() {
   const box = document.getElementById("weeklyInfo");
-  if (!data.weeklyGoal) {
-    box.innerText = "週目標：未設定";
-    return;
-  }
+  if (data.weeklyGoal == null) {
+  box.innerText = "週目標：未設定";
+  return;
+}
 
   const weekLogs = data.logs.filter(l => {
     const d = new Date(l.date);
@@ -484,10 +486,14 @@ function updateWeeklyInfo() {
 `;
 
   if (remain <= 0 && !data.weeklyCleared) {
-    data.weeklyCleared = true;
-    showWeeklyClear();
-    saveServer();
-  }
+  data.weeklyCleared = true;
+
+  // ⭐ 日目標と同じ構造にする
+  onWeeklyGoalCleared();
+
+  showWeeklyClear();
+  saveServer();
+　}
 } // ← ★ これが抜けていた
 
 function checkWeeklyReset() {
