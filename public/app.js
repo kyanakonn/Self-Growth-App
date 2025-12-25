@@ -30,6 +30,10 @@ const weeklyGoalEl = document.getElementById("weeklyGoalText");
 let dailyGoalMinutes = 0; // 1日の目標（分）
 let code, data;
 let startTime, timerInterval;
+/* ===============================
+   早稲田商学部 AI 定義
+================================ */
+
 const WASEDA_SUBJECTS = [
   "リーディング",
   "リスニング",
@@ -38,12 +42,23 @@ const WASEDA_SUBJECTS = [
   "世界史"
 ];
 
+const SUBJECT_GROUPS = {
+  英語: ["リーディング", "リスニング", "スピーキング"],
+  国語: ["国語"],
+  世界史: ["世界史"]
+};
+
+// 理想配分（統計ベース）
 const IDEAL_RATIO = {
-  リーディング: 0.30,   // 長文・語彙・精読（最重要）
-  リスニング: 0.15,   // 共テ/私大対策
-  スピーキング: 0.10, // 音読・瞬間英作文（補助）
-  国語: 0.25,          // 現代文・論理力
-  世界史: 0.20         // 論述・流れ理解
+  英語: 0.6,
+  国語: 0.2,
+  世界史: 0.2
+};
+
+// 1日の理想学習時間（分）
+const IDEAL_MINUTES = {
+  weekday: 300, // 5h
+  holiday: 600  // 10h
 };
 
 const fmt = s =>
@@ -435,7 +450,128 @@ function showDailyClear() {
 
 /* ---------- 模擬AI ---------- */
 function aiEval() {
-  aiEvalAdvanced();
+  const logs = todayLogs();
+  if (!logs.length) {
+    alert("本日の記録がありません。");
+    return;
+  }
+
+  const isHoliday =
+    data.holidayMode === true ||
+    [0, 6].includes(new Date().getDay());
+
+  const ideal = isHoliday
+    ? IDEAL_MINUTES.holiday
+    : IDEAL_MINUTES.weekday;
+
+  const totalMin =
+    logs.reduce((a, l) => a + l.sec, 0) / 60;
+
+  /* ---------- ① 時間スコア ---------- */
+  const timeScore =
+    Math.min(totalMin / ideal, 1.2); // 上限補正
+
+  /* ---------- ② 科目配分スコア ---------- */
+  const engMin =
+    sumSec(SUBJECT_GROUPS.英語, logs) / 60;
+  const japMin =
+    sumSec(SUBJECT_GROUPS.国語, logs) / 60;
+  const histMin =
+    sumSec(SUBJECT_GROUPS.世界史, logs) / 60;
+
+  const actualRatio = {
+    英語: engMin / totalMin || 0,
+    国語: japMin / totalMin || 0,
+    世界史: histMin / totalMin || 0
+  };
+
+  let ratioError = 0;
+  for (const k in IDEAL_RATIO) {
+    ratioError += Math.abs(
+      IDEAL_RATIO[k] - actualRatio[k]
+    );
+  }
+
+  const ratioScore =
+    Math.max(1 - ratioError, 0);
+
+  /* ---------- ③ 総合スコア ---------- */
+  const finalScore =
+    timeScore * 0.6 +
+    ratioScore * 0.4;
+
+  /* ---------- ④ 評価決定 ---------- */
+  let grade;
+  if (finalScore >= 0.95) grade = "A";
+  else if (finalScore >= 0.8) grade = "B";
+  else if (finalScore >= 0.6) grade = "C";
+  else if (finalScore >= 0.4) grade = "D";
+  else grade = "E";
+
+  /* ---------- ⑤ 合格確率（模擬統計） ---------- */
+  const probability = Math.min(
+    Math.round(finalScore * 100),
+    99
+  );
+
+  /* ---------- ⑥ コメント ---------- */
+  const DAILY_COMMENTS = {
+  A: [
+    "非常に高密度な学習日です。商学部合格水準を明確に上回っています。",
+    "理想的な時間量と配分です。このペースを維持できれば安全圏です。",
+    "学習効率・量ともに申し分ありません。合格に直結する1日です。",
+    "完成度の高い勉強日です。今後は弱点補強に比重を移していきましょう。",
+    "トップ層の学習バランスです。自信を持って継続してください。"
+  ],
+  B: [
+    "良好な学習日です。あと一段階でA評価に届きます。",
+    "時間は十分です。科目配分を少し意識するとさらに良くなります。",
+    "合格ラインを意識できている勉強です。継続が鍵です。",
+    "十分評価できますが、ややムラが見られます。",
+    "安定した勉強日です。週単位で見れば高評価です。"
+  ],
+  C: [
+    "最低限の学習はできていますが、合格には不足です。",
+    "時間または配分のどちらかに課題があります。",
+    "今日は“維持日”といった印象です。",
+    "伸ばすには学習時間の底上げが必要です。",
+    "危険ではありませんが安心できる水準でもありません。"
+  ],
+  D: [
+    "学習量が明らかに不足しています。",
+    "合格水準からは距離があります。",
+    "このペースが続くとリスクが高まります。",
+    "短時間でも集中度を上げる工夫が必要です。",
+    "学習習慣の立て直しが急務です。"
+  ],
+  E: [
+    "ほとんど学習できていません。",
+    "現状では合格可能性は極めて低いです。",
+    "危機的状況です。まずは毎日机に向かう習慣から。",
+    "受験勉強として成立していません。",
+    "今日の内容は評価対象外です。"
+  ]
+};
+  const comments = DAILY_COMMENTS[grade];
+  const comment =
+    comments[
+      Math.floor(Math.random() * comments.length)
+    ];
+
+  alert(
+`📊 AI学習評価（早稲田商学部）
+
+■ 本日の評価：${grade}
+■ 合格可能性：${probability}%
+
+■ 総学習時間：${Math.round(totalMin)}分
+■ 英語：${Math.round(engMin)}分
+■ 国語：${Math.round(japMin)}分
+■ 世界史：${Math.round(histMin)}分
+
+💬 AIコメント
+${comment}`
+  );
 }
 
 function dateKey(d = new Date()) {
@@ -488,35 +624,6 @@ function dailyGrade(hours, isHoliday) {
   return "E";
 }
 
-function dailyAIComment(grade) {
-  const comments = {
-    A: [
-      "完璧です。この積み重ねが合格ラインを作ります。",
-      "今日の学習量は合格者水準です。",
-      "非常に良い1日。自信を持ってください。"
-    ],
-    B: [
-      "十分に意味のある学習量です。",
-      "安定して力を伸ばしています。",
-      "このペースを維持できれば合格圏内です。"
-    ],
-    C: [
-      "最低限はクリアしています。",
-      "忙しい中でもよくやっています。",
-      "少しずつ積み上げましょう。"
-    ],
-    D: [
-      "ゼロではないのは評価できます。",
-      "今日は調整日ですね。",
-      "明日で取り返せます。"
-    ],
-    E: [
-      "今日はお休みでしたね。",
-      "切り替えて明日からいきましょう。",
-      "休養も戦略の一部です。"
-    ]
-  };
-
   const list = comments[grade];
   return list[Math.floor(Math.random() * list.length)];
 }
@@ -566,76 +673,7 @@ function safeRate(a, b) {
 }
 
 function aiEvalAdvanced() {
-  const today = new Date().toISOString().slice(0, 10);
-
-  const todayMin = data.logs
-    .filter(l => l.date === today)
-    .reduce((a, l) => a + l.sec, 0) / 60;
-
-  const todayHours = todayMin / 60;
-  const isHoliday =
-    data.longHolidayMode ||
-    [0, 6].includes(new Date().getDay());
-
-  /* --- 日次評価 --- */
-  const dailyRank = dailyGrade(todayHours, isHoliday);
-
-  const comments = {
-    A: [
-      "理想的な学習量です。このペースなら商学部合格圏。",
-      "質・量ともに非常に優秀です。",
-      "完全に受験生上位層の勉強量です。"
-    ],
-    B: [
-      "良いペースですが、もう一段階伸ばしたい。",
-      "安定感は十分。A判定が見えます。"
-    ],
-    C: [
-      "最低限は確保できています。",
-      "積み上げがやや弱めです。"
-    ],
-    D: [
-      "学習量が不足しています。",
-      "このままだと危険ゾーンです。"
-    ],
-    E: [
-      "まずは少しでも学習を始めましょう。",
-      "早急な改善が必要です。"
-    ]
-  };
-
-  const dailyComment =
-    comments[dailyRank][
-      Math.floor(Math.random() * comments[dailyRank].length)
-    ];
-
-  /* --- 長期評価 --- */
-  const totalHours =
-    data.logs.reduce((a, l) => a + l.sec, 0) / 3600;
-
-  const targetHours = 3000; // 早稲田商 安全圏目安
-  const rate = safeRate(totalHours, targetHours);
-  const prob = Math.min(95, Math.round(rate * 100));
-
-  const finalRank =
-    prob >= 80 ? "A" :
-    prob >= 65 ? "B" :
-    prob >= 50 ? "C" :
-    prob >= 35 ? "D" : "E";
-
-  alert(
-`【AI学習評価（早稲田大学 商学部）】
-
-📅 本日：${isHoliday ? "休日" : "平日"}
-⏱ 学習時間：${todayHours.toFixed(1)}h
-📊 日次評価：${dailyRank}
-💬 コメント：
-${dailyComment}
-
-📈 総学習時間：${totalHours.toFixed(0)}h
-🎯 合格可能性：${prob}%
-🏫 合格判定：${finalRank}`
-  );
+  aiEval(); 
 }
 
 function toggleHolidayMode() {
@@ -643,6 +681,17 @@ function toggleHolidayMode() {
   document.getElementById("holidayModeText").innerText =
     data.longHolidayMode ? "ON（休日扱い）" : "OFF（平日扱い）";
   saveServer();
+}
+
+function sumSec(subjects, logs) {
+  return logs
+    .filter(l => subjects.includes(l.subject))
+    .reduce((a, l) => a + l.sec, 0);
+}
+
+function todayLogs() {
+  const today = new Date().toISOString().slice(0, 10);
+  return data.logs.filter(l => l.date === today);
 }
 
 /* ---------- 共通 ---------- */
