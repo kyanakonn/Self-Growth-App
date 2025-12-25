@@ -545,15 +545,19 @@ function aiEval() {
   const w = evalWeekly();
   const m = evalMonthly();
   const p = calcPassProbabilityAdvanced();
+  const pace = calcDaysTo3000();
 
   if (!d) {
     alert("本日の記録がありません");
     return;
   }
 
-   saveAIHistory(d, w, m);
-   
-  const dailyComment = dailyAIComment(d.grade);
+  let paceText = "算出不可";
+  if (pace) {
+    paceText =
+      `平均 ${pace.avgDailyHours.toFixed(2)} 時間/日\n` +
+      `残り 約 ${pace.days} 日（約 ${pace.months} ヶ月）`;
+  }
 
   alert(
 `📊 AI学習評価（早稲田商学部）
@@ -561,20 +565,24 @@ function aiEval() {
 【本日】
 評価：${d.grade}
 学習時間：${formatHourMin(d.totalMin)}
-コメント：
-${dailyComment}
+${dailyAIComment(d.grade)}
 
 【今週】
 評価：${w.grade}
 学習時間：${formatHourMin(w.totalMin)}
+${weeklyAIComment(w.grade)}
 
 【今月】
 評価：${m.grade}
 学習時間：${formatHourMin(m.totalMin)}
+${monthlyAIComment(m.grade)}
 
 【合格判定】
 可能性：${p.percent}%
 判定：${p.grade}
+
+【3000時間到達予測】
+${paceText}
 `
   );
 }
@@ -620,6 +628,28 @@ function dailyAIComment(grade) {
 
   const list = comments[grade] || ["評価コメントを生成できませんでした。"];
   return list[Math.floor(Math.random() * list.length)];
+}
+
+function weeklyAIComment(grade) {
+  const comments = {
+    A: "今週は理想的な学習量と配分です。受験生上位層のペースです。",
+    B: "良い1週間です。安定感がありますが、あと一歩伸ばせます。",
+    C: "最低限は確保できています。週後半の伸びが鍵です。",
+    D: "学習量が不足気味です。週の前半をもっと有効に。",
+    E: "このままでは危険です。週計画の見直しが必要です。"
+  };
+  return comments[grade] || "";
+}
+
+function monthlyAIComment(grade) {
+  const comments = {
+    A: "今月は合格圏の学習量です。非常に順調です。",
+    B: "良い月でした。継続できれば合格が見えてきます。",
+    C: "可もなく不可もなく。来月は学習量アップが必須です。",
+    D: "学習時間が足りません。月単位での戦略変更を。",
+    E: "この水準が続くと合格は厳しいです。大幅な改善が必要です。"
+  };
+  return comments[grade] || "";
 }
 
 function dateKey(d = new Date()) {
@@ -886,6 +916,31 @@ function saveAIHistory(d, w, m) {
   };
 
   saveServer();
+}
+
+function calcDaysTo3000() {
+  const totalMin = data.logs.reduce((sum, l) => sum + l.min, 0);
+  const totalHours = totalMin / 60;
+
+  if (totalHours <= 0) return null;
+
+  // 直近14日間の平均学習時間
+  const today = new Date();
+  const recentLogs = data.logs.filter(l => {
+    const d = new Date(l.date);
+    return (today - d) / (1000 * 60 * 60 * 24) <= 14;
+  });
+
+  const recentMin = recentLogs.reduce((s, l) => s + l.min, 0);
+  const avgDailyHours = recentMin / 60 / Math.max(1, new Set(recentLogs.map(l => l.date)).size);
+
+  if (avgDailyHours <= 0) return null;
+
+  const remainHours = Math.max(3000 - totalHours, 0);
+  const days = Math.ceil(remainHours / avgDailyHours);
+  const months = (days / 30).toFixed(1);
+
+  return { days, months, avgDailyHours };
 }
 
 /* ---------- 共通 ---------- */
