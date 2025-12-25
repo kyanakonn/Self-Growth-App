@@ -539,7 +539,7 @@ function getTotalBySubject() {
 
   data.logs.forEach(log => {
     if (totals[log.subject] !== undefined) {
-      totals[log.subject] += log.minutes;
+       totals[log.subject] += log.sec / 60;
     }
   });
   return totals;
@@ -1104,5 +1104,27 @@ function onDailyGoalCleared() {
   }
 
   saveServer();
+}
+
+function calcAchievementRateRaw(history, days) {
+  if (!history) return 0;
+
+  const now = new Date();
+  let total = 0;
+  let cleared = 0;
+
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+
+    if (history[key] !== undefined) {
+      total++;
+      if (history[key]) cleared++;
+    }
+  }
+
+  if (total === 0) return 0;
+  return cleared / total; // 0〜1
 }
 
