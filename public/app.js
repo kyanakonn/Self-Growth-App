@@ -598,7 +598,7 @@ function aiEvalAdvanced() {
       "このままだと危険ゾーンです。"
     ],
     E: [
-      "受験生基準ではかなり不足しています。",
+      "まずは少しでも学習を始めましょう。",
       "早急な改善が必要です。"
     ]
   };
@@ -612,7 +612,7 @@ function aiEvalAdvanced() {
   const totalHours =
     data.logs.reduce((a, l) => a + l.sec, 0) / 3600;
 
-  const targetHours = 2500; // 早稲田商 安全圏目安
+  const targetHours = 3000; // 早稲田商 安全圏目安
   const rate = safeRate(totalHours, targetHours);
   const prob = Math.min(95, Math.round(rate * 100));
 
