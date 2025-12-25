@@ -924,7 +924,7 @@ function calcDaysTo3000() {
   if (!data.logs || data.logs.length === 0) return null;
 
   // 総学習時間（分）
-  const totalMin = data.logs.reduce((sum, l) => sum + l.min, 0);
+  const totalMin = data.logs.reduce((sum, l) => sum + l.sec / 60, 0);
   const totalHours = totalMin / 60;
 
   if (totalHours <= 0) return null;
