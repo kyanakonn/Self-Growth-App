@@ -355,20 +355,20 @@ function renderCalendar() {
 
   grid.innerHTML = "";
 
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
+  const y = calendarYear
+  const m = calendarMonth;
 
   title.innerText = `${y}年 ${m+1}月`;
 
   // 月評価（上部）
   const monthKey =
-    `${y}-${String(m+1).padStart(2,"0")}`;
-  const monthEval = data.aiHistory.monthly[monthKey];
+  `${y}-${String(m + 1).padStart(2, "0")}`;
 
-  monthlyBox.innerText = monthEval
-    ? `📊 今月の評価：${monthEval.grade}（${formatHourMin(monthEval.totalMin)}）`
-    : "📊 今月の評価：未評価";
+const monthEval = data.aiHistory.monthly[monthKey];
+
+monthlyBox.innerText = monthEval
+  ? `📊 今月の評価：${monthEval.grade}（${formatHourMin(monthEval.totalMin)}）`
+  : "📊 今月の評価：未評価";
 
   // 日付生成
   const last = new Date(y, m+1, 0).getDate();
@@ -400,6 +400,22 @@ function renderCalendar() {
 
     grid.appendChild(cell);
   }
+}
+
+function changeMonth(diff) {
+  calendarMonth += diff;
+
+  if (calendarMonth < 0) {
+    calendarMonth = 11;
+    calendarYear--;
+  }
+
+  if (calendarMonth > 11) {
+    calendarMonth = 0;
+    calendarYear++;
+  }
+
+  renderCalendar();
 }
 
 /* ---------- 設定・プロフィール ---------- */
