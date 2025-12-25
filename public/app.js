@@ -62,6 +62,12 @@ function loadData(d) {
   data = d;
 
 data.weeklyGoal ??= null;
+data.weeklyGoalLocked ??= false;
+data.weeklyGoalEnd ??= null;
+data.weeklyCleared ??= false;
+
+data.weeklyGoalHistory ??= {};
+data.weeklyStreak ??= 0;
 
   data.exp ??= 0;
   data.logs ??= [];
@@ -78,7 +84,6 @@ data.weeklyGoal ??= null;
   checkDailyReset();
   updateUI();
 }
-
 /* ---------- UI ---------- */
 function updateUI() {
   nicknameText.innerText = data.nickname || "Player";
@@ -99,7 +104,6 @@ function updateUI() {
   updateWeeklyInfo();
   updateGoalsUI();
 }
-
 /* ---------- タイマー ---------- */
 
 function start() {
