@@ -450,128 +450,83 @@ function showDailyClear() {
 
 /* ---------- 模擬AI ---------- */
 function aiEval() {
-  const logs = todayLogs();
-  if (!logs.length) {
-    alert("本日の記録がありません。");
+  const d = evalDaily();
+  const w = evalWeekly();
+  const m = evalMonthly();
+  const p = calcPassProbabilityAdvanced();
+
+  if (!d) {
+    alert("本日の記録がありません");
     return;
   }
 
-  const isHoliday =
-  data.longHolidayMode === true ||
-  [0, 6].includes(new Date().getDay());
-
-  const ideal = isHoliday
-    ? IDEAL_MINUTES.holiday
-    : IDEAL_MINUTES.weekday;
-
-  const totalMin =
-    logs.reduce((a, l) => a + l.sec, 0) / 60;
-
-  /* ---------- ① 時間スコア ---------- */
-  const timeScore =
-    Math.min(totalMin / ideal, 1.2); // 上限補正
-
-  /* ---------- ② 科目配分スコア ---------- */
-  const engMin =
-    sumSec(SUBJECT_GROUPS.英語, logs) / 60;
-  const japMin =
-    sumSec(SUBJECT_GROUPS.国語, logs) / 60;
-  const histMin =
-    sumSec(SUBJECT_GROUPS.世界史, logs) / 60;
-
-  const actualRatio = {
-    英語: engMin / totalMin || 0,
-    国語: japMin / totalMin || 0,
-    世界史: histMin / totalMin || 0
-  };
-
-  let ratioError = 0;
-  for (const k in IDEAL_RATIO) {
-    ratioError += Math.abs(
-      IDEAL_RATIO[k] - actualRatio[k]
-    );
-  }
-
-  const ratioScore =
-    Math.max(1 - ratioError, 0);
-
-  /* ---------- ③ 総合スコア ---------- */
-  const finalScore =
-    timeScore * 0.6 +
-    ratioScore * 0.4;
-
-  /* ---------- ④ 評価決定 ---------- */
-  let grade;
-  if (finalScore >= 0.95) grade = "A";
-  else if (finalScore >= 0.8) grade = "B";
-  else if (finalScore >= 0.6) grade = "C";
-  else if (finalScore >= 0.4) grade = "D";
-  else grade = "E";
-
-  /* ---------- ⑤ 合格確率（模擬統計） ---------- */
-  const probability = Math.min(
-    Math.round(finalScore * 100),
-    99
-  );
-
-  /* ---------- ⑥ コメント ---------- */
-  const DAILY_COMMENTS = {
-  A: [
-    "非常に高密度な学習日です。商学部合格水準を明確に上回っています。",
-    "理想的な時間量と配分です。このペースを維持できれば安全圏です。",
-    "学習効率・量ともに申し分ありません。合格に直結する1日です。",
-    "完成度の高い勉強日です。今後は弱点補強に比重を移していきましょう。",
-    "トップ層の学習バランスです。自信を持って継続してください。"
-  ],
-  B: [
-    "良好な学習日です。あと一段階でA評価に届きます。",
-    "時間は十分です。科目配分を少し意識するとさらに良くなります。",
-    "合格ラインを意識できている勉強です。継続が鍵です。",
-    "十分評価できますが、ややムラが見られます。",
-    "安定した勉強日です。週単位で見れば高評価です。"
-  ],
-  C: [
-    "最低限の学習はできていますが、合格には不足です。",
-    "時間または配分のどちらかに課題があります。",
-    "今日は“維持日”といった印象です。",
-    "伸ばすには学習時間の底上げが必要です。",
-    "危険ではありませんが安心できる水準でもありません。"
-  ],
-  D: [
-    "学習量が明らかに不足しています。",
-    "合格水準からは距離があります。",
-    "このペースが続くとリスクが高まります。",
-    "短時間でも集中度を上げる工夫が必要です。",
-    "学習習慣の立て直しが急務です。"
-  ],
-  E: [
-    "ほとんど学習できていません。",
-    "現状では合格可能性は極めて低いです。",
-    "危機的状況です。まずは毎日机に向かう習慣から。",
-    "受験勉強として成立していません。",
-    "今日の内容は評価対象外です。"
-  ]
-};
-  const comments = DAILY_COMMENTS[grade];
-  const comment =
-    comments[
-      Math.floor(Math.random() * comments.length)
-    ];
+  const dailyComment = dailyAIComment(d.grade);
 
   alert(
 `📊 AI学習評価（早稲田商学部）
 
-■ 本日の評価：${grade}
-■ 合格可能性：${probability}%
+【本日】
+評価：${d.grade}
+学習時間：${formatHourMin(d.totalMin)}
+コメント：
+${dailyComment}
 
-■ 総学習時間：${Math.round(totalMin)}分
-■ 英語：${Math.round(engMin)}分
-■ 国語：${Math.round(japMin)}分
-■ 世界史：${Math.round(histMin)}分
+【今週】
+評価：${w.grade}
+学習時間：${formatHourMin(w.totalMin)}
 
-💬 AIコメント
-${comment}`
+【今月】
+評価：${m.grade}
+学習時間：${formatHourMin(m.totalMin)}
+
+【合格判定】
+可能性：${p.percent}%
+判定：${p.grade}
+`
   );
+}
+
+function dailyAIComment(grade) {
+  const comments = {
+    A: [
+      "今日は理想的な学習内容です。早稲田商学部合格ラインを明確に超える1日でした。",
+      "時間・配分・継続性のすべてが高水準です。このペースを維持してください。",
+      "非常に完成度の高い学習日です。今後は弱点補強を意識するとさらに伸びます。",
+      "今日の学習は合格者層の平均を上回っています。",
+      "戦略的にも量的にも申し分ありません。A評価にふさわしい内容です。"
+    ],
+    B: [
+      "全体として良好ですが、もう一段階上を目指せます。",
+      "学習習慣は安定しています。科目配分を意識するとAが見えてきます。",
+      "合格圏に向かう正しい学習です。少しだけ負荷を上げましょう。",
+      "内容は良いので、継続が最大の課題です。",
+      "今の努力は確実に積み上がっています。"
+    ],
+    C: [
+      "最低限の学習はできていますが、改善余地が大きいです。",
+      "今日はやや量・質ともに不足気味でした。",
+      "まずは毎日の学習時間を安定させましょう。",
+      "合格者平均との差はまだあります。焦らず積み上げが必要です。",
+      "次回は目標時間の達成を意識してください。"
+    ],
+    D: [
+      "学習量が不足しています。計画の見直しが必要です。",
+      "継続性が途切れがちです。短時間でも毎日を意識しましょう。",
+      "今日は合格戦略としては不十分な内容です。",
+      "この状態が続くと危険です。生活リズムから整えましょう。",
+      "まずは30分でも学習時間を確保してください。"
+    ],
+    E: [
+      "学習記録がほとんどありません。早急な改善が必要です。",
+      "現状では合格はかなり厳しい状況です。",
+      "今日の学習内容では評価できません。",
+      "まずは机に向かう習慣作りから始めましょう。",
+      "今が立て直しのタイミングです。"
+    ]
+  };
+
+  const list = comments[grade] || ["評価コメントを生成できませんでした。"];
+  return list[Math.floor(Math.random() * list.length)];
 }
 
 function dateKey(d = new Date()) {
@@ -677,6 +632,136 @@ function sumSec(subjects, logs) {
 function todayLogs() {
   const today = new Date().toISOString().slice(0, 10);
   return data.logs.filter(l => l.date === today);
+}
+
+function formatHourMin(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return `${h}.${String(m).padStart(2,"0")}h`;
+}
+
+function gradeFromScore(score) {
+  if (score >= 0.9) return "A";
+  if (score >= 0.75) return "B";
+  if (score >= 0.6) return "C";
+  if (score >= 0.45) return "D";
+  return "E";
+}
+
+function clamp(v,min=0,max=1){
+  return Math.max(min,Math.min(max,v));
+}
+
+function subjectRatioScore(logs) {
+  const total = logs.reduce((a,l)=>a+l.sec,0);
+  if (!total) return 0;
+
+  const byGroup = {
+    英語: sumSec(SUBJECT_GROUPS.英語, logs),
+    国語: sumSec(SUBJECT_GROUPS.国語, logs),
+    世界史: sumSec(SUBJECT_GROUPS.世界史, logs)
+  };
+
+  let diff = 0;
+  for (const k in IDEAL_RATIO) {
+    diff += Math.abs(
+      (byGroup[k] / total) - IDEAL_RATIO[k]
+    );
+  }
+  return clamp(1 - diff);
+}
+
+function evalDaily() {
+  const logs = todayLogs();
+  if (!logs.length) return null;
+
+  const totalMin = logs.reduce((a,l)=>a+l.sec,0)/60;
+  const ideal = data.longHolidayMode ? 600 : 300;
+
+  const timeScore = clamp(totalMin / ideal);
+  const ratioScore = subjectRatioScore(logs);
+  const streakScore = clamp((data.dailyStreak||0)/7);
+
+  const score =
+    timeScore * 0.6 +
+    ratioScore * 0.1 +
+    streakScore * 0.3;
+
+  return {
+    score,
+    grade: gradeFromScore(score),
+    totalMin
+  };
+}
+
+function evalWeekly() {
+  const mins = getThisWeekTotalMinutes();
+  const ideal = (data.longHolidayMode ? 600 : 300) * 7;
+
+  const timeScore = clamp(mins / ideal);
+  const ratioScore = subjectRatioScore(
+    data.logs.filter(l=>new Date(l.date)>=getWeekStart())
+  );
+
+  const goalRate =
+    calcAchievementRateRaw(data.dailyGoalHistory,7);
+
+  const score =
+    timeScore * 0.6 +
+    ratioScore * 0.2 +
+    goalRate * 0.2;
+
+  return {
+    score,
+    grade: gradeFromScore(score),
+    totalMin: mins
+  };
+}
+
+function evalMonthly() {
+  const logs = data.logs.filter(l=>{
+    const d = new Date(l.date);
+    const now = new Date();
+    return d.getMonth()===now.getMonth();
+  });
+
+  const totalMin = logs.reduce((a,l)=>a+l.sec,0)/60;
+  const ideal = (data.longHolidayMode ? 600 : 300) * 30;
+
+  const timeScore = clamp(totalMin / ideal);
+  const ratioScore = subjectRatioScore(logs);
+  const goalRate =
+    calcAchievementRateRaw(data.dailyGoalHistory,30);
+
+  const score =
+    timeScore * 0.5 +
+    ratioScore * 0.3 +
+    goalRate * 0.2;
+
+  return {
+    score,
+    grade: gradeFromScore(score),
+    totalMin
+  };
+}
+
+function calcPassProbabilityAdvanced() {
+  const totalHours =
+    data.logs.reduce((a,l)=>a+l.sec,0)/3600;
+
+  const timeRate = clamp(totalHours / 3000);
+  const balance = subjectRatioScore(data.logs);
+  const habit = clamp((data.dailyStreak||0)/30);
+
+  const score =
+    timeRate * 0.6 +
+    balance * 0.25 +
+    habit * 0.15;
+
+  return {
+    percent: Math.round(score * 100),
+    grade: gradeFromScore(score)
+  };
 }
 
 /* ---------- 共通 ---------- */
