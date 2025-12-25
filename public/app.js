@@ -80,6 +80,8 @@ function loadData(d) {
 
 /* ---------- UI ---------- */
 function updateUI() {
+  nicknameText.innerText = data.nickname || "Player";
+
   subject.innerHTML =
     data.subjects.map(s => `<option>${s}</option>`).join("");
 
@@ -90,19 +92,10 @@ function updateUI() {
 
   weeklyGoalInput.value = data.weeklyGoal;
 
-  nicknameText.innerText = data.nickname || "Player";
-  
   updateExp();
   drawChart();
   updateWeeklyInfo();
   updateGoalsUI();
-}
-
-function checkDailyReset() {
-  const today = new Date().toISOString().slice(0, 10);
-  if (data.dailyGoalDate !== today) {
-    data.dailyCleared = false;
-  }
 }
 
 /* ---------- タイマー ---------- */
