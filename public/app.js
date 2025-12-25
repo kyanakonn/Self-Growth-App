@@ -1,4 +1,6 @@
 let chart = null;
+let calendarYear;
+let calendarMonth; // 0〜11
 const nicknameText = document.getElementById("nicknameText");
 const timerFullTime = document.getElementById("timerFullTime");
 const nicknameInput = document.getElementById("nicknameInput");
@@ -334,6 +336,10 @@ function drawChart() {
 }
 
 function openCalendar() {
+  const now = new Date();
+  calendarYear = now.getFullYear();
+  calendarMonth = now.getMonth();
+
   document.getElementById("calendarModal").style.display = "flex";
   renderCalendar();
 }
