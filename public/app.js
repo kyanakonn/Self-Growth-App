@@ -1,4 +1,5 @@
 let chart = null;
+const timerFullTime = document.getElementById("timerFullTime");
 const logsModal = document.getElementById("logsModal");
 const logsList = document.getElementById("logsList");
 const editModal = document.getElementById("editModal");
