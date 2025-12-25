@@ -2,13 +2,10 @@ let chart = null;
 const logsModal = document.getElementById("logsModal");
 const logsList = document.getElementById("logsList");
 const editModal = document.getElementById("editModal");
-
 const editSubject = document.getElementById("editSubject");
 const editHour = document.getElementById("editHour");
 const editMin = document.getElementById("editMin");
-
 let editingIndex = null;
-
 const manualHour = document.getElementById("manualHour");
 const manualMin = document.getElementById("manualMin");
 const startBtn = document.getElementById("startBtn");
@@ -18,7 +15,7 @@ const timer = document.getElementById("timer");
 const subject = document.getElementById("subject");
 const manualSubject = document.getElementById("manualSubject");
 const weeklyGoalInput = document.getElementById("weeklyGoalInput");
-const levelEl = document.getElementById("level");
+const levelEl = document.getElementById("levelText");
 const exp = document.getElementById("exp");
 const expInfo = document.getElementById("expInfo");
 const settings = document.getElementById("settings");
@@ -83,7 +80,6 @@ function updateUI() {
   drawChart();
   updateWeeklyInfo();
   updateGoalsUI();
-updateExpUI();
 }
 
 /* ---------- タイマー ---------- */
@@ -274,7 +270,7 @@ function saveGoals() {
   localStorage.setItem("weeklyGoal", weeklyGoalMinutes);
   localStorage.setItem("dailyGoal", dailyGoalMinutes);
 
-  closeSetting();
+  closeSettings();
   updateUI();
 }
 
