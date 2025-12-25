@@ -320,18 +320,17 @@ function closeProfile() {
 }
 
 function saveNickname() {
-  const name = nicknameInput.value.trim();
+  const input = document.getElementById("nicknameInput");
+  const name = input.value.trim();
 
-  if (!name) {
-    alert("ニックネームを入力してください");
-    return;
-  }
+  data.nickname = name || "Player";
 
-  data.nickname = name;
   saveServer();
 
-  // 即反映
-  openProfile();
+  // ✅ 即反映
+  nicknameText.innerText = data.nickname;
+
+  updateUI(); // 念のため全体も更新
 }
 
 function saveGoals() {
