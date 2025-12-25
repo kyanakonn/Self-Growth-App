@@ -1,5 +1,6 @@
 let chart = null;
 const timerFullTime = document.getElementById("timerFullTime");
+const nicknameInput = document.getElementById("nicknameInput");
 const dailyGoalInput = document.getElementById("dailyGoalInput");
 const dailyGoalEl = document.getElementById("dailyGoalText");
 const logsModal = document.getElementById("logsModal");
@@ -63,6 +64,7 @@ function loadData(d) {
   data.exp ??= 0;
   data.logs ??= [];
   data.subjects ??= [];
+  data.nickname ??= "Player";
 
   settings.style.display = "none";
   profile.style.display = "none";
@@ -294,13 +296,15 @@ function closeSettings() {
 }
 
 function openProfile() {
-  settings.style.display = "none";   // ← 先に閉じる
+  settings.style.display = "none";
   profile.style.display = "flex";
 
+  // 🔹 現在のニックネームを入力欄へ
+  nicknameInput.value = data.nickname || "";
+
   profileText.innerText = `
-ニックネーム：${data.nickname}
-レベル：${Math.floor(Math.sqrt(data.exp / 30))}
-総EXP：${data.exp}
+レベル：${calcLevel(data.exp)}
+総EXP：${Math.floor(data.exp)}
 最高連続日数：${data.maxStreak || 0}
 合計時間：${Math.floor(data.logs.reduce((a,l)=>a+l.sec,0)/3600)}h
 引き継ぎコード：${code}
@@ -309,6 +313,21 @@ function openProfile() {
 
 function closeProfile() {
   profile.style.display = "none";
+}
+
+function saveNickname() {
+  const name = nicknameInput.value.trim();
+
+  if (!name) {
+    alert("ニックネームを入力してください");
+    return;
+  }
+
+  data.nickname = name;
+  saveServer();
+
+  // 即反映
+  openProfile();
 }
 
 function saveGoals() {
