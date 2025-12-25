@@ -18,14 +18,16 @@
 
 <div id="app" hidden>
   <header class="header">
-  <div class="header-top">
-  <div>
+  <!-- 🔝 最上段：名前 & レベル -->
+  <div class="header-name">
     <div id="nicknameText">Player</div>
     <div id="levelText">Lv.1</div>
   </div>
-  <button id="settingBtn" onclick="openSettings()">⚙️</button>
-</div>
 
+  <!-- 設定ボタン -->
+  <button id="settingBtn" onclick="openSettings()">⚙️</button>
+
+  <!-- EXPバー -->
   <div class="exp-container">
     <div class="exp-bar">
       <div id="exp"></div>
