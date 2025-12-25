@@ -59,6 +59,11 @@ async function fetchData() {
 function loadData(d) {
   data = d;
 
+  // ★ これを追加
+  data.exp ??= 0;
+  data.logs ??= [];
+  data.subjects ??= [];
+
   settings.style.display = "none";
   profile.style.display = "none";
 
