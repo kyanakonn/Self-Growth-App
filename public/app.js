@@ -918,28 +918,41 @@ function saveAIHistory(d, w, m) {
 }
 
 function calcDaysTo3000() {
+  const IDEAL_TOTAL_HOURS = 3000;
+
+  // 全ログ取得
+  if (!data.logs || data.logs.length === 0) return null;
+
+  // 総学習時間（分）
   const totalMin = data.logs.reduce((sum, l) => sum + l.min, 0);
   const totalHours = totalMin / 60;
 
   if (totalHours <= 0) return null;
 
-  // 直近14日間の平均学習時間
-  const today = new Date();
-  const recentLogs = data.logs.filter(l => {
-    const d = new Date(l.date);
-    return (today - d) / (1000 * 60 * 60 * 24) <= 14;
-  });
+  // 学習した日数（重複除外）
+  const uniqueDays = new Set(
+    data.logs.map(l => l.date)
+  );
+  const daysStudied = uniqueDays.size;
 
-  const recentMin = recentLogs.reduce((s, l) => s + l.min, 0);
-  const avgDailyHours = recentMin / 60 / Math.max(1, new Set(recentLogs.map(l => l.date)).size);
+  if (daysStudied <= 0) return null;
 
-  if (avgDailyHours <= 0) return null;
+  // 平均学習時間（時間/日）
+  const avgDailyHours = totalHours / daysStudied;
 
-  const remainHours = Math.max(3000 - totalHours, 0);
-  const days = Math.ceil(remainHours / avgDailyHours);
-  const months = (days / 30).toFixed(1);
+  if (!avgDailyHours || avgDailyHours <= 0) return null;
 
-  return { days, months, avgDailyHours };
+  // 残り時間
+  const remainingHours = Math.max(0, IDEAL_TOTAL_HOURS - totalHours);
+
+  const remainingDays = Math.ceil(remainingHours / avgDailyHours);
+  const remainingMonths = Math.ceil(remainingDays / 30);
+
+  return {
+    avgDailyHours,
+    days: remainingDays,
+    months: remainingMonths
+  };
 }
 
 /* ---------- 共通 ---------- */
