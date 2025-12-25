@@ -645,10 +645,14 @@ function getThisWeekTotalMinutes() {
     .reduce((sum, l) => sum + l.sec, 0) / 60;
 }
 
-function showExpFloat(diff) {
-  const el = document.getElementById("expFloat");
-  el.textContent = `${diff > 0 ? "+" : ""}${Math.round(diff)} EXP`;
-  el.className = "exp-float show" + (diff < 0 ? " minus" : "");
+function showExpFloat(diffExp) {
+  const div = document.createElement("div");
+  div.className = "exp-float";
 
-  setTimeout(() => el.classList.remove("show"), 600);
+  const sign = diffExp > 0 ? "+" : "";
+  div.textContent = `${sign}${Math.round(diffExp)} EXP`;
+
+  document.body.appendChild(div);
+
+  setTimeout(() => div.remove(), 1200);
 }
