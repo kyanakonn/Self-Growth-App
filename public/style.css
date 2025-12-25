@@ -177,3 +177,24 @@ input, select {
   transform: scaleY(1.4);
   transition: transform 0.3s;
 }
+
+.exp-float {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  font-size: 24px;
+  font-weight: bold;
+  color: gold;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.6s ease;
+  z-index: 9999;
+}
+.exp-float.show {
+  opacity: 1;
+  transform: translate(-50%, -40px);
+}
+.exp-float.minus {
+  color: #ff5252;
+}
