@@ -75,9 +75,21 @@ async function newStart() {
 
     const j = await r.json();
     code = j.code;
+
     alert("引き継ぎコード：" + code);
 
-    const d = await fetchData();
+    // ✅ 新規データをその場で作る
+    const d = {
+      logs: [],
+      subjects: WASEDA_SUBJECTS,
+      exp: 0,
+      nickname: "Player"
+    };
+
+    localStorage.setItem("loggedIn", "true");
+    localStorage.setItem("code", code);
+    localStorage.setItem("data", JSON.stringify(d));
+
     loadData(d);
     showApp();
 
@@ -115,15 +127,10 @@ async function load() {
   }
 }
 
-async function fetchData(codeArg) {
-  const r = await fetch("/api/load", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code: codeArg })
-  });
-
-  if (!r.ok) throw new Error("fetch failed");
-  return await r.json();
+async function fetchData() {
+  const d = localStorage.getItem("data");
+  if (!d) throw new Error("local data not found");
+  return JSON.parse(d);
 }
 
 function loadData(d) {
@@ -158,6 +165,11 @@ function loadData(d) {
   // UI更新だけ
   updateUI();
 }
+
+function saveServer() {
+  localStorage.setItem("data", JSON.stringify(data));
+}
+
 /* ---------- UI ---------- */
 function updateUI() {
   nicknameText.innerText = data.nickname || "Player";
