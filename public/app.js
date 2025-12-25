@@ -30,6 +30,20 @@ const weeklyGoalEl = document.getElementById("weeklyGoalText");
 let dailyGoalMinutes = 0; // 1日の目標（分）
 let code, data;
 let startTime, timerInterval;
+const WASEDA_SUBJECTS = [
+  "英語",
+  "数学",
+  "国語",
+  "日本史",
+  "世界史"
+];
+const IDEAL_RATIO = {
+  英語: 0.35,
+  数学: 0.25,
+  国語: 0.15,
+  日本史: 0.15,
+  世界史: 0.10
+};
 
 const fmt = s =>
   new Date(s * 1000).toISOString().substr(11, 8);
@@ -409,6 +423,149 @@ function showDailyClear() {
   }, 1200);
 }
 
+/* ---------- 模擬AI ---------- */
+function aiEval() {
+  aiEvalAdvanced();
+}
+
+function dateKey(d = new Date()) {
+  return d.toISOString().slice(0, 10);
+}
+
+function getTotalBySubject() {
+  const totals = {};
+  WASEDA_SUBJECTS.forEach(s => totals[s] = 0);
+
+  data.logs.forEach(log => {
+    if (totals[log.subject] !== undefined) {
+      totals[log.subject] += log.minutes;
+    }
+  });
+  return totals;
+}
+
+function countStudyDays(days) {
+  const set = new Set();
+  const now = new Date();
+
+  data.logs.forEach(log => {
+    const d = new Date(log.date);
+    const diff = (now - d) / 86400000;
+    if (diff >= 0 && diff < days) {
+      set.add(log.date);
+    }
+  });
+  return set.size;
+}
+
+function getRecentTotal(days) {
+  const now = new Date();
+  return data.logs.reduce((sum, log) => {
+    const d = new Date(log.date);
+    const diff = (now - d) / 86400000;
+    return diff >= 0 && diff < days ? sum + log.minutes : sum;
+  }, 0);
+}
+
+function dailyGrade(minutes) {
+  if (minutes >= 180) return "A";
+  if (minutes >= 120) return "B";
+  if (minutes >= 60) return "C";
+  if (minutes > 0) return "D";
+  return "E";
+}
+
+function dailyAIComment(grade) {
+  const comments = {
+    A: [
+      "完璧です。この積み重ねが合格ラインを作ります。",
+      "今日の学習量は合格者水準です。",
+      "非常に良い1日。自信を持ってください。"
+    ],
+    B: [
+      "十分に意味のある学習量です。",
+      "安定して力を伸ばしています。",
+      "このペースを維持できれば合格圏内です。"
+    ],
+    C: [
+      "最低限はクリアしています。",
+      "忙しい中でもよくやっています。",
+      "少しずつ積み上げましょう。"
+    ],
+    D: [
+      "ゼロではないのは評価できます。",
+      "今日は調整日ですね。",
+      "明日で取り返せます。"
+    ],
+    E: [
+      "今日はお休みでしたね。",
+      "切り替えて明日からいきましょう。",
+      "休養も戦略の一部です。"
+    ]
+  };
+
+  const list = comments[grade];
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function subjectBalanceScore() {
+  const totals = getTotalBySubject();
+  const totalMinutes = Object.values(totals).reduce((a,b)=>a+b,0);
+  if (totalMinutes === 0) return 0;
+
+  let diffSum = 0;
+  for (const s of WASEDA_SUBJECTS) {
+    const actual = totals[s] / totalMinutes;
+    diffSum += Math.abs(actual - IDEAL_RATIO[s]);
+  }
+
+  return Math.max(0, 100 - diffSum * 200);
+}
+
+function calcPassProbability() {
+  const total = data.logs.reduce((s,l)=>s+l.minutes,0);
+  const balance = subjectBalanceScore();
+  const days30 = countStudyDays(30);
+  const recent7 = getRecentTotal(7);
+
+  let score = 0;
+
+  score += Math.min(total / 60000 * 35, 35); // 約1000時間で満点
+  score += balance * 0.25;
+  score += Math.min(days30 / 30 * 20, 20);
+  score += Math.min(recent7 / 2100 * 10, 10); // 1日5h×7
+  score += Math.min(getTodayTotalMinutes() / 180 * 10, 10);
+
+  return Math.min(100, Math.round(score));
+}
+
+function passGrade(p) {
+  if (p >= 85) return "A";
+  if (p >= 70) return "B";
+  if (p >= 55) return "C";
+  if (p >= 40) return "D";
+  return "E";
+}
+
+function aiEvalAdvanced() {
+  const todayMin = getTodayTotalMinutes();
+  const dGrade = dailyGrade(todayMin);
+  const dComment = dailyAIComment(dGrade);
+
+  const prob = calcPassProbability();
+  const pGrade = passGrade(prob);
+
+  alert(
+`【本日の評価】${dGrade}
+${dComment}
+
+【合格可能性】${prob}%
+判定：${pGrade}
+
+※ 本AIは学習傾向を基にした模擬評価です`
+  );
+}
+
 /* ---------- 共通 ---------- */
 
 function toggle(running) {
@@ -428,10 +585,6 @@ function saveServer() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ code, data })
   });
-}
-
-function aiEval() {
-  alert("判定：B\n合格確率：72%\nこの調子で継続しよう！");
 }
 
 function getWeekEnd() {
