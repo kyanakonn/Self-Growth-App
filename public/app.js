@@ -119,6 +119,13 @@ function updateUI() {
   drawChart();
   updateWeeklyInfo();
   updateGoalsUI();
+
+  const t = document.getElementById("holidayModeText");
+  if (t) {
+    t.innerText = data.longHolidayMode
+      ? "ON（休日扱い）"
+      : "OFF（平日扱い）";
+  }
 }
 /* ---------- タイマー ---------- */
 
