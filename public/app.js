@@ -226,7 +226,7 @@ function deleteLog() {
 function gainExp(min) {
   const beforeLevel = calcLevel(data.exp);
   data.exp += min * 2;
-+ showExpFloat(min * 2);
+   showExpFloat(min * 2);
   const afterLevel = calcLevel(data.exp);
 
   updateExp();
@@ -457,8 +457,8 @@ function aiEval() {
   }
 
   const isHoliday =
-    data.holidayMode === true ||
-    [0, 6].includes(new Date().getDay());
+  data.longHolidayMode === true ||
+  [0, 6].includes(new Date().getDay());
 
   const ideal = isHoliday
     ? IDEAL_MINUTES.holiday
@@ -613,21 +613,6 @@ function getRecentTotal(days) {
   }, 0);
 }
 
-function dailyGrade(hours, isHoliday) {
-  const 기준 = isHoliday ? 10 : 5;
-  const rate = hours / 기준;
-
-  if (rate >= 1) return "A";
-  if (rate >= 0.8) return "B";
-  if (rate >= 0.6) return "C";
-  if (rate >= 0.4) return "D";
-  return "E";
-}
-
-  const list = comments[grade];
-  return list[Math.floor(Math.random() * list.length)];
-}
-
 function subjectBalanceScore() {
   const totals = getTotalBySubject();
   const totalMinutes = Object.values(totals).reduce((a,b)=>a+b,0);
@@ -769,13 +754,12 @@ function updateWeeklyInfo() {
   if (remain <= 0 && !data.weeklyCleared) {
   data.weeklyCleared = true;
 
-  // ⭐ 日目標と同じ構造にする
   onWeeklyGoalCleared();
 
   showWeeklyClear();
   saveServer();
 　}
-} // ← ★ これが抜けていた
+}
 
 function checkWeeklyReset() {
   if (data.weeklyGoalEnd && new Date() > new Date(data.weeklyGoalEnd)) {
