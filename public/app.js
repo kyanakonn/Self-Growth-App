@@ -22,6 +22,9 @@ const expInfo = document.getElementById("expInfo");
 const settings = document.getElementById("settings");
 const profile = document.getElementById("profile");
 const profileText = document.getElementById("profileText");
+const weeklyGoalEl = document.getElementById("weeklyGoalText");
+const dailyGoalEl  = document.getElementById("dailyGoalText");
+const dailyGoalInput = document.getElementById("dailyGoalInput");
 let dailyGoalMinutes = 0; // 1日の目標（分）
 let code, data;
 let startTime, timerInterval;
@@ -276,28 +279,31 @@ function saveGoals() {
 }
 
 function updateGoalsUI() {
-  const weeklyGoalMinutes = data.weeklyGoalMinutes || 0;
-  const dailyGoalMinutes  = data.dailyGoalMinutes  || 0;
+  const weeklyGoalMinutes = (data.weeklyGoal || 0) * 60;
+  const dailyGoalMinutes  = (data.dailyGoal  || 0) * 60;
 
   const todayMinutes  = getTodayTotalMinutes();
   const weeklyMinutes = getThisWeekTotalMinutes();
 
-  // 週目標
   const weeklyRemain = Math.max(0, weeklyGoalMinutes - weeklyMinutes);
+  const dailyRemain  = Math.max(0, dailyGoalMinutes - todayMinutes);
 
-  // 日目標
-  const dailyRemain = Math.max(0, dailyGoalMinutes - todayMinutes);
-
-  // 表示更新
   weeklyGoalEl.textContent =
-    weeklyGoalMinutes > 0
+    data.weeklyGoal
       ? `週目標 残り ${Math.floor(weeklyRemain / 60)}h ${weeklyRemain % 60}m`
-      : '週目標 未設定';
+      : "週目標 未設定";
 
   dailyGoalEl.textContent =
-    dailyGoalMinutes > 0
+    data.dailyGoal
       ? `日目標 残り ${Math.floor(dailyRemain / 60)}h ${dailyRemain % 60}m`
-      : '日目標 未設定';
+      : "日目標 未設定";
+
+  // 🎉 日目標クリア演出
+  if (dailyGoalMinutes > 0 && dailyRemain <= 0 && !data.dailyCleared) {
+    data.dailyCleared = true;
+    showDailyClear();
+    saveServer();
+  }
 }
 
 function showDailyClear() {
