@@ -95,8 +95,6 @@ function updateUI() {
 function checkDailyReset() {
   const today = new Date().toISOString().slice(0, 10);
   if (data.dailyGoalDate !== today) {
-    data.dailyGoalMinutes = 0;
-    data.dailyGoalDate = null;
     data.dailyCleared = false;
   }
 }
