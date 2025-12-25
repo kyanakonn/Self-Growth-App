@@ -269,3 +269,14 @@ input, select {
   margin-bottom: 10px;
   font-weight: bold;
 }
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.calendar-header button {
+  font-size: 18px;
+}
