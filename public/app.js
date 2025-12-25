@@ -276,23 +276,28 @@ function saveGoals() {
 }
 
 function updateGoalsUI() {
-  const todayMinutes = getTodayTotalMinutes();
+  const weeklyGoalMinutes = data.weeklyGoalMinutes || 0;
+  const dailyGoalMinutes  = data.dailyGoalMinutes  || 0;
+
+  const todayMinutes  = getTodayTotalMinutes();
   const weeklyMinutes = getThisWeekTotalMinutes();
 
-  // 週
-  const wRemain = Math.max(weeklyGoalMinutes - weeklyMinutes, 0);
-  weeklyGoalText.textContent =
-    `週目標 残り ${Math.floor(wRemain/60)}時間 ${wRemain%60}分`;
+  // 週目標
+  const weeklyRemain = Math.max(0, weeklyGoalMinutes - weeklyMinutes);
 
-  // 日
-  const dRemain = Math.max(dailyGoalMinutes - todayMinutes, 0);
-  dailyGoalText.textContent =
-    `今日の目標 残り ${Math.floor(dRemain/60)}時間 ${dRemain%60}分`;
+  // 日目標
+  const dailyRemain = Math.max(0, dailyGoalMinutes - todayMinutes);
 
-  // 🎉 クリア演出
-  if (dailyGoalMinutes > 0 && todayMinutes >= dailyGoalMinutes) {
-    showDailyClear();
-  }
+  // 表示更新
+  weeklyGoalEl.textContent =
+    weeklyGoalMinutes > 0
+      ? `週目標 残り ${Math.floor(weeklyRemain / 60)}h ${weeklyRemain % 60}m`
+      : '週目標 未設定';
+
+  dailyGoalEl.textContent =
+    dailyGoalMinutes > 0
+      ? `日目標 残り ${Math.floor(dailyRemain / 60)}h ${dailyRemain % 60}m`
+      : '日目標 未設定';
 }
 
 function showDailyClear() {
