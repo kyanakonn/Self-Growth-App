@@ -83,6 +83,8 @@ data.weeklyCleared ??= false;
 data.weeklyGoalHistory ??= {};
 data.weeklyStreak ??= 0;
 
+  data.longHolidayMode ??= false;
+
   data.exp ??= 0;
   data.logs ??= [];
   data.subjects ??= [];
