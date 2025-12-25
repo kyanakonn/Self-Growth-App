@@ -1,5 +1,7 @@
 let chart = null;
 const timerFullTime = document.getElementById("timerFullTime");
+const dailyGoalInput = document.getElementById("dailyGoalInput");
+const dailyGoalEl = document.getElementById("dailyGoalText");
 const logsModal = document.getElementById("logsModal");
 const logsList = document.getElementById("logsList");
 const editModal = document.getElementById("editModal");
@@ -71,6 +73,7 @@ function loadData(d) {
   document.getElementById("app").hidden = false;
 
   checkWeeklyReset();
+  checkDailyReset();
   updateUI();
 }
 
@@ -89,6 +92,15 @@ function updateUI() {
   drawChart();
   updateWeeklyInfo();
   updateGoalsUI();
+}
+
+function checkDailyReset() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (data.dailyGoalDate !== today) {
+    data.dailyGoalMinutes = 0;
+    data.dailyGoalDate = null;
+    data.dailyCleared = false;
+  }
 }
 
 /* ---------- タイマー ---------- */
@@ -270,40 +282,48 @@ function closeProfile() {
 }
 
 function saveGoals() {
-  const w = Number(weeklyGoalInput.value);
+  const today = new Date().toISOString().slice(0, 10);
   const d = Number(dailyGoalInput.value);
 
-  if (w > 0) weeklyGoalMinutes = w * 60;
-  if (d > 0) dailyGoalMinutes = d * 60;
+  // すでに今日設定済みならブロック
+  if (data.dailyGoalDate === today) {
+    alert("日目標は1日1回まで設定できます");
+    return;
+  }
 
-  localStorage.setItem("weeklyGoal", weeklyGoalMinutes);
-  localStorage.setItem("dailyGoal", dailyGoalMinutes);
+  if (d > 0) {
+    data.dailyGoalMinutes = d * 60;
+    data.dailyGoalDate = today;
+  }
 
+  saveServer();
   closeSettings();
   updateUI();
 }
 
 function updateGoalsUI() {
-  const weeklyGoalMinutes = (data.weeklyGoal || 0) * 60;
-  const dailyGoalMinutes  = (data.dailyGoal  || 0) * 60;
+  const today = new Date().toISOString().slice(0, 10);
 
-  const todayMinutes  = getTodayTotalMinutes();
-  const weeklyMinutes = getThisWeekTotalMinutes();
+  const dailyGoalMinutes = data.dailyGoalMinutes || 0;
+  const todayMinutes = getTodayTotalMinutes();
 
-  const weeklyRemain = Math.max(0, weeklyGoalMinutes - weeklyMinutes);
-  const dailyRemain  = Math.max(0, dailyGoalMinutes - todayMinutes);
+  // 日付が変わったら解除
+  if (data.dailyGoalDate !== today) {
+    data.dailyGoalMinutes = 0;
+    data.dailyGoalDate = null;
+    dailyGoalInput.disabled = false;
+  } else {
+    dailyGoalInput.disabled = true;
+  }
 
-  weeklyGoalEl.textContent =
-    data.weeklyGoal
-      ? `週目標 残り ${Math.floor(weeklyRemain / 60)}h ${weeklyRemain % 60}m`
-      : "週目標 未設定";
+  const dailyRemain = Math.max(0, dailyGoalMinutes - todayMinutes);
 
   dailyGoalEl.textContent =
-    data.dailyGoal
-      ? `日目標 残り ${Math.floor(dailyRemain / 60)}h ${dailyRemain % 60}m`
+    dailyGoalMinutes > 0
+      ? `日目標 残り ${Math.floor(dailyRemain / 60)}時間 ${Math.floor(dailyRemain % 60)}分`
       : "日目標 未設定";
 
-  // 🎉 日目標クリア演出
+  // 🎉 クリア演出
   if (dailyGoalMinutes > 0 && dailyRemain <= 0 && !data.dailyCleared) {
     data.dailyCleared = true;
     showDailyClear();
