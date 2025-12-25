@@ -69,15 +69,22 @@ const fmt = s =>
 /* ---------- 初期 ---------- */
 // 新規スタート
 async function newStart() {
-  const r = await fetch("/api/new", { method: "POST" });
-  const j = await r.json();
+  try {
+    const r = await fetch("/api/new", { method: "POST" });
+    if (!r.ok) throw new Error("api/new failed");
 
-  code = j.code;
-  alert("引き継ぎコード：" + code);
+    const j = await r.json();
+    code = j.code;
+    alert("引き継ぎコード：" + code);
 
-  const d = await fetchData();
-  loadData(d);
-  showApp();
+    const d = await fetchData();
+    loadData(d);
+    showApp();
+
+  } catch (e) {
+    console.error(e);
+    alert("新規スタートに失敗しました");
+  }
 }
 
 async function load() {
