@@ -71,20 +71,19 @@ const fmt = s =>
 async function newStart() {
   try {
     const r = await fetch("/api/new", { method: "POST" });
-    if (!r.ok) throw new Error("new start failed");
+    if (!r.ok) throw new Error();
 
     const j = await r.json();
     code = j.code;
 
     alert("引き継ぎコード：" + code);
 
+    localStorage.setItem("loggedIn", "true");
+    localStorage.setItem("code", code); // ★重要
+
     const serverData = await fetchData();
     loadData(serverData);
 
-    // ✅ ログイン状態を保存
-    localStorage.setItem("loggedIn", "true");
-
-    // ✅ 画面切り替え
     showApp();
     updateUI();
 
@@ -98,18 +97,14 @@ async function newStart() {
 async function load() {
   try {
     code = document.getElementById("codeInput").value;
-    if (!code) {
-      alert("引き継ぎコードを入力してください");
-      return;
-    }
+    if (!code) return alert("引き継ぎコードを入力してください");
+
+    localStorage.setItem("loggedIn", "true");
+    localStorage.setItem("code", code); // ★重要
 
     const serverData = await fetchData();
     loadData(serverData);
 
-    // ✅ ログイン状態を保存
-    localStorage.setItem("loggedIn", "true");
-
-    // ✅ 画面切り替え
     showApp();
     updateUI();
 
@@ -1369,18 +1364,30 @@ function logout() {
   if (!confirm("ログアウトしますか？")) return;
 
   localStorage.removeItem("loggedIn");
+  localStorage.removeItem("code");
 
-  // 画面切り替え
   document.getElementById("app").hidden = true;
   document.getElementById("start").hidden = false;
 
   closeSettings();
 }
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
   if (localStorage.getItem("loggedIn") === "true") {
-    showApp();
-    loadData();     // 既存のデータ復元
-    updateUI();
+    const savedCode = localStorage.getItem("code");
+    if (!savedCode) return;
+
+    code = savedCode;
+
+    try {
+      const serverData = await fetchData();
+      loadData(serverData);
+      showApp();
+      updateUI();
+    } catch (e) {
+      console.error(e);
+      localStorage.removeItem("loggedIn");
+      localStorage.removeItem("code");
+    }
   }
 });
