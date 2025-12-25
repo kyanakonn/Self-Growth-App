@@ -628,3 +628,11 @@ function getThisWeekTotalMinutes() {
     .filter(l => new Date(l.date) >= startOfWeek)
     .reduce((sum, l) => sum + l.sec, 0) / 60;
 }
+
+function showExpFloat(diff) {
+  const el = document.getElementById("expFloat");
+  el.textContent = `${diff > 0 ? "+" : ""}${Math.round(diff)} EXP`;
+  el.className = "exp-float show" + (diff < 0 ? " minus" : "");
+
+  setTimeout(() => el.classList.remove("show"), 600);
+}
