@@ -120,9 +120,18 @@
 </div>
 
 <!-- プロフィール -->
+<!-- プロフィール -->
 <div id="profile" class="modal">
   <div class="modal-content">
     <h2>プロフィール</h2>
+
+    <label>ニックネーム</label>
+    <input id="nicknameInput" type="text" placeholder="ニックネーム">
+
+    <button onclick="saveNickname()">保存</button>
+
+    <hr>
+
     <p id="profileText"></p>
     <button onclick="closeProfile()">閉じる</button>
   </div>
