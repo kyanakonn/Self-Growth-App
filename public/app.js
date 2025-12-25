@@ -467,11 +467,14 @@ function getRecentTotal(days) {
   }, 0);
 }
 
-function dailyGrade(minutes) {
-  if (minutes >= 180) return "A";
-  if (minutes >= 120) return "B";
-  if (minutes >= 60) return "C";
-  if (minutes > 0) return "D";
+function dailyGrade(hours, isHoliday) {
+  const 기준 = isHoliday ? 10 : 5;
+  const rate = hours / 기준;
+
+  if (rate >= 1) return "A";
+  if (rate >= 0.8) return "B";
+  if (rate >= 0.6) return "C";
+  if (rate >= 0.4) return "D";
   return "E";
 }
 
@@ -547,6 +550,11 @@ function passGrade(p) {
   return "E";
 }
 
+function safeRate(a, b) {
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= 0) return 0;
+  return a / b;
+}
+
 function aiEvalAdvanced() {
   const todayMin = getTodayTotalMinutes();
   const dGrade = dailyGrade(todayMin);
@@ -560,9 +568,7 @@ function aiEvalAdvanced() {
 ${dComment}
 
 【合格可能性】${prob}%
-判定：${pGrade}
-
-※ 本AIは学習傾向を基にした模擬評価です`
+判定：${pGrade}`
   );
 }
 
