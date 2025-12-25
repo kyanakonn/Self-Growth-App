@@ -556,20 +556,83 @@ function safeRate(a, b) {
 }
 
 function aiEvalAdvanced() {
-  const todayMin = getTodayTotalMinutes();
-  const dGrade = dailyGrade(todayMin);
-  const dComment = dailyAIComment(dGrade);
+  const today = new Date().toISOString().slice(0, 10);
 
-  const prob = calcPassProbability();
-  const pGrade = passGrade(prob);
+  const todayMin = data.logs
+    .filter(l => l.date === today)
+    .reduce((a, l) => a + l.sec, 0) / 60;
+
+  const todayHours = todayMin / 60;
+  const isHoliday =
+    data.longHolidayMode ||
+    [0, 6].includes(new Date().getDay());
+
+  /* --- 日次評価 --- */
+  const dailyRank = dailyGrade(todayHours, isHoliday);
+
+  const comments = {
+    A: [
+      "理想的な学習量です。このペースなら商学部合格圏。",
+      "質・量ともに非常に優秀です。",
+      "完全に受験生上位層の勉強量です。"
+    ],
+    B: [
+      "良いペースですが、もう一段階伸ばしたい。",
+      "安定感は十分。A判定が見えます。"
+    ],
+    C: [
+      "最低限は確保できています。",
+      "積み上げがやや弱めです。"
+    ],
+    D: [
+      "学習量が不足しています。",
+      "このままだと危険ゾーンです。"
+    ],
+    E: [
+      "受験生基準ではかなり不足しています。",
+      "早急な改善が必要です。"
+    ]
+  };
+
+  const dailyComment =
+    comments[dailyRank][
+      Math.floor(Math.random() * comments[dailyRank].length)
+    ];
+
+  /* --- 長期評価 --- */
+  const totalHours =
+    data.logs.reduce((a, l) => a + l.sec, 0) / 3600;
+
+  const targetHours = 2500; // 早稲田商 安全圏目安
+  const rate = safeRate(totalHours, targetHours);
+  const prob = Math.min(95, Math.round(rate * 100));
+
+  const finalRank =
+    prob >= 80 ? "A" :
+    prob >= 65 ? "B" :
+    prob >= 50 ? "C" :
+    prob >= 35 ? "D" : "E";
 
   alert(
-`【本日の評価】${dGrade}
-${dComment}
+`【AI学習評価（早稲田大学 商学部）】
 
-【合格可能性】${prob}%
-判定：${pGrade}`
+📅 本日：${isHoliday ? "休日" : "平日"}
+⏱ 学習時間：${todayHours.toFixed(1)}h
+📊 日次評価：${dailyRank}
+💬 コメント：
+${dailyComment}
+
+📈 総学習時間：${totalHours.toFixed(0)}h
+🎯 合格可能性：${prob}%
+🏫 合格判定：${finalRank}`
   );
+}
+
+function toggleHolidayMode() {
+  data.longHolidayMode = !data.longHolidayMode;
+  document.getElementById("holidayModeText").innerText =
+    data.longHolidayMode ? "ON（休日扱い）" : "OFF（平日扱い）";
+  saveServer();
 }
 
 /* ---------- 共通 ---------- */
