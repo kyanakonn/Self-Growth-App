@@ -280,3 +280,16 @@ input, select {
 .calendar-header button {
   font-size: 18px;
 }
+
+.logout-btn {
+  margin-top: 12px;
+  background: #aa3333;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+.logout-btn:hover {
+  background: #cc4444;
+}
