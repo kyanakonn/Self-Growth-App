@@ -25,7 +25,6 @@ const settings = document.getElementById("settings");
 const profile = document.getElementById("profile");
 const profileText = document.getElementById("profileText");
 const weeklyGoalEl = document.getElementById("weeklyGoalText");
-const dailyGoalInput = document.getElementById("dailyGoalInput");
 let dailyGoalMinutes = 0; // 1日の目標（分）
 let code, data;
 let startTime, timerInterval;
