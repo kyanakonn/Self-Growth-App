@@ -71,17 +71,17 @@ const fmt = s =>
 async function newStart() {
   try {
     const r = await fetch("/api/new", { method: "POST" });
-    if (!r.ok) throw new Error();
+    if (!r.ok) throw new Error("new failed");
 
     const j = await r.json();
     code = j.code;
 
+    localStorage.setItem("loggedIn", "true");
+    localStorage.setItem("code", code);
+
     alert("引き継ぎコード：" + code);
 
-    localStorage.setItem("loggedIn", "true");
-    localStorage.setItem("code", code); // ★重要
-
-    const serverData = await fetchData();
+    const serverData = await fetchData(code);
     loadData(serverData);
 
     showApp();
@@ -102,7 +102,7 @@ async function load() {
     localStorage.setItem("loggedIn", "true");
     localStorage.setItem("code", code); // ★重要
 
-    const serverData = await fetchData();
+    const serverData = await fetchData(code);
     loadData(serverData);
 
     showApp();
@@ -114,13 +114,15 @@ async function load() {
   }
 }
 
-async function fetchData() {
+async function fetchData(codeArg) {
   const r = await fetch("/api/load", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code })
+    body: JSON.stringify({ code: codeArg })
   });
-  return r.json();
+
+  if (!r.ok) throw new Error("fetch failed");
+  return await r.json();
 }
 
 function loadData(d) {
@@ -1373,21 +1375,20 @@ function logout() {
 }
 
 window.addEventListener("load", async () => {
-  if (localStorage.getItem("loggedIn") === "true") {
-    const savedCode = localStorage.getItem("code");
-    if (!savedCode) return;
+  if (localStorage.getItem("loggedIn") !== "true") return;
 
+  const savedCode = localStorage.getItem("code");
+  if (!savedCode) return;
+
+  try {
     code = savedCode;
-
-    try {
-      const serverData = await fetchData();
-      loadData(serverData);
-      showApp();
-      updateUI();
-    } catch (e) {
-      console.error(e);
-      localStorage.removeItem("loggedIn");
-      localStorage.removeItem("code");
-    }
+    const serverData = await fetchData(savedCode);
+    loadData(serverData);
+    showApp();
+    updateUI();
+  } catch (e) {
+    console.error(e);
+    localStorage.removeItem("loggedIn");
+    localStorage.removeItem("code");
   }
 });
