@@ -120,16 +120,19 @@
 
     <h3>目標設定</h3>
 
-<label>1日の目標時間（時間）</label>
-<input type="number" id="dailyGoalInput">
+    <label>1日の目標時間（時間）</label>
+    <input type="number" id="dailyGoalInput">
 
-<button onclick="saveGoals()">保存</button>
+    <button onclick="saveGoals()">保存</button>
 
     <hr>
+
+    <!-- 👤 プロフィール -->
     <button onclick="openProfile()">プロフィールを見る</button>
+
+    <!-- 🚪 ログアウト（ここ！） -->
+    <button onclick="logout()" class="logout-btn">ログアウト</button>
   </div>
-  <hr>
-<button onclick="logout()">ログアウト</button>
 </div>
 
 <!-- プロフィール -->
