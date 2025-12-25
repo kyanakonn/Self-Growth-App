@@ -299,7 +299,7 @@ function animateExpDiff(diffExp) {
   }, 30);
 }
 
-/* ---------- グラフ ---------- */
+/* ---------- グラフとカレンダー---------- */
 function drawChart() {
   chart?.destroy();
 
@@ -331,6 +331,69 @@ function drawChart() {
       }
     }
   });
+}
+
+function openCalendar() {
+  document.getElementById("calendarModal").style.display = "flex";
+  renderCalendar();
+}
+
+function closeCalendar() {
+  document.getElementById("calendarModal").style.display = "none";
+}
+
+function renderCalendar() {
+  const grid = document.getElementById("calendarGrid");
+  const title = document.getElementById("calendarMonthTitle");
+  const monthlyBox = document.getElementById("monthlyEval");
+
+  grid.innerHTML = "";
+
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+
+  title.innerText = `${y}年 ${m+1}月`;
+
+  // 月評価（上部）
+  const monthKey =
+    `${y}-${String(m+1).padStart(2,"0")}`;
+  const monthEval = data.aiHistory.monthly[monthKey];
+
+  monthlyBox.innerText = monthEval
+    ? `📊 今月の評価：${monthEval.grade}（${formatHourMin(monthEval.totalMin)}）`
+    : "📊 今月の評価：未評価";
+
+  // 日付生成
+  const last = new Date(y, m+1, 0).getDate();
+
+  for (let d = 1; d <= last; d++) {
+    const key =
+      `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+
+    const cell = document.createElement("div");
+    cell.className = "calendar-cell";
+    cell.innerHTML = `<div>${d}</div>`;
+
+    // 日評価
+    const daily = data.aiHistory.daily[key];
+    if (daily) {
+      cell.innerHTML += `<strong>${daily.grade}</strong>`;
+    }
+
+    // 土曜に週評価表示
+    const dateObj = new Date(key);
+    if (dateObj.getDay() === 6) {
+      const weekKey =
+        `${y}-W${getWeekNumber(dateObj)}`;
+      const weekly = data.aiHistory.weekly[weekKey];
+      if (weekly) {
+        cell.innerHTML += `<small>週:${weekly.grade}</small>`;
+      }
+    }
+
+    grid.appendChild(cell);
+  }
 }
 
 /* ---------- 設定・プロフィール ---------- */
@@ -1174,4 +1237,3 @@ function calcAchievementRateRaw(history, days) {
   if (total === 0) return 0;
   return cleared / total; // 0〜1
 }
-
