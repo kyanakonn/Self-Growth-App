@@ -299,11 +299,21 @@ function openProfile() {
   // 🔹 現在のニックネームを入力欄へ
   nicknameInput.value = data.nickname || "";
 
-  profileText.innerText = `
+profileText.innerText = `
+ニックネーム：${data.nickname}
 レベル：${calcLevel(data.exp)}
 総EXP：${Math.floor(data.exp)}
-最高連続日数：${data.maxStreak || 0}
-合計時間：${Math.floor(data.logs.reduce((a,l)=>a+l.sec,0)/3600)}h
+
+日目標達成率：${calcAchievementRate(data.dailyGoalHistory)}
+週目標達成率：${calcAchievementRate(data.weeklyGoalHistory)}
+
+日目標連続達成：${data.dailyStreak || 0}日
+週目標連続達成：${data.weeklyStreak || 0}週
+
+合計時間：${Math.floor(
+  data.logs.reduce((a,l)=>a+l.sec,0)/3600
+)}h
+
 引き継ぎコード：${code}
 `;
 }
@@ -364,9 +374,9 @@ function updateGoalsUI() {
   const dailyRemain = Math.max(0, dailyGoalMinutes - todayMinutes);
 
   dailyGoalEl.textContent =
-    dailyGoalMinutes > 0
-      ? `日目標 残り ${Math.floor(dailyRemain / 60)}時間 ${Math.floor(dailyRemain % 60)}分`
-      : "日目標 未設定";
+  dailyGoalMinutes > 0
+    ? `日目標 残り ${h}時間 ${m}分（${data.dailyStreak || 0}日連続達成）`
+    : "日目標 未設定";
 
   // 🎉 クリア演出
   if (dailyGoalMinutes > 0 && dailyRemain <= 0 && !data.dailyCleared) {
@@ -374,6 +384,19 @@ function updateGoalsUI() {
     showDailyClear();
     saveServer();
   }
+}
+
+function onDailyGoalCleared() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  data.dailyGoalHistory ??= {};
+
+  if (!data.dailyGoalHistory[today]) {
+    data.dailyGoalHistory[today] = true;
+    data.dailyStreak = (data.dailyStreak || 0) + 1;
+  }
+
+  saveServer();
 }
 
 function showDailyClear() {
@@ -458,9 +481,12 @@ function updateWeeklyInfo() {
   const m = Math.floor(remain % 60);
 
   box.innerHTML = `
-    <h3>週目標 ${data.weeklyGoal}時間</h3>
-    <p>残り ${h}時間 ${m}分</p>
-  `;
+  <h3>
+    週目標 ${data.weeklyGoal}時間
+    <small>（${data.weeklyStreak || 0}週連続達成）</small>
+  </h3>
+  <p>残り ${h}時間 ${m}分</p>
+`;
 
   if (remain <= 0 && !data.weeklyCleared) {
     data.weeklyCleared = true;
@@ -507,6 +533,21 @@ function showLevelUp(count) {
   loop();
 }
 
+function onWeeklyGoalCleared() {
+  const now = new Date();
+  const weekKey =
+    `${now.getFullYear()}-W${getWeekNumber(now)}`;
+
+  data.weeklyGoalHistory ??= {};
+
+  if (!data.weeklyGoalHistory[weekKey]) {
+    data.weeklyGoalHistory[weekKey] = true;
+    data.weeklyStreak = (data.weeklyStreak || 0) + 1;
+  }
+
+  saveServer();
+}
+
 function showWeeklyClear() {
   const overlay = document.getElementById("weeklyClear");
   overlay.style.pointerEvents = "auto";
@@ -519,6 +560,13 @@ function showWeeklyClear() {
     overlay.style.pointerEvents = "none";
     document.body.classList.remove("flash");
   }, 1200);
+}
+
+function getWeekNumber(d) {
+  const firstDay = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(
+    ((d - firstDay) / 86400000 + firstDay.getDay() + 1) / 7
+  );
 }
 
 let currentGraph = "day";
@@ -671,3 +719,26 @@ function showExpFloat(diffExp) {
 
   setTimeout(() => div.remove(), 1200);
 }
+
+function checkDailyReset() {
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000)
+    .toISOString().slice(0, 10);
+
+  if (data.dailyGoalDate !== today) {
+    if (!data.dailyGoalHistory?.[yesterday]) {
+      data.dailyStreak = 0; // 途切れた
+    }
+
+    data.dailyGoalDate = null;
+    data.dailyCleared = false;
+  }
+}
+
+function calcAchievementRate(history) {
+  if (!history) return "0%";
+  const total = Object.keys(history).length;
+  const cleared = Object.values(history).filter(v => v).length;
+  return total ? `${Math.round((cleared / total) * 100)}%` : "0%";
+}
+
