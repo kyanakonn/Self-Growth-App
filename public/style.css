@@ -244,3 +244,28 @@ input, select {
 .goal-card h3 {
   margin-bottom: 8px;
 }
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.calendar-cell {
+  background: #111;
+  color: #fff;
+  padding: 6px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.calendar-cell strong {
+  display: block;
+  margin-top: 4px;
+}
+
+.calendar-monthly {
+  margin-bottom: 10px;
+  font-weight: bold;
+}
